@@ -4,7 +4,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct VarCtx<K, V> {
     map: HashMap<K, V>,
 }
@@ -106,7 +106,7 @@ pub trait Append<T> {
     fn append(&mut self, t: T) -> bool;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum VarValue<T, O> {
     Target(T),              // normal variables (you can get its type from the ir_program)
     Direct(OverloadSet<O>), // magic overloaded functions
@@ -154,7 +154,7 @@ impl<T, O: Superset> Append<VarValue<T, O>> for VarValue<T, O> {
  * Each signature must have a unique set of params, and they should be all 'useful'.
  * It is resolved in priority from back to front.
  */
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct OverloadSet<O> {
     pub signatures: Vec<O>,
 }

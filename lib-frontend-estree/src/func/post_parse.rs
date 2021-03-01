@@ -8,7 +8,6 @@ use crate::estree::SourceLocation as esSL;
 use crate::estree::*;
 use crate::extensions::IntoSourceLocation;
 use crate::frontendvar::OverloadSet;
-use ir;
 use projstd::log::CompileMessage;
 use std::collections::HashMap;
 use std::result::Result;
@@ -1057,7 +1056,9 @@ fn post_parse_toplevel_statement(
                 })
             }
         }
-
+        NodeKind::ArrayExpression(arr_expr) => {
+            post_parse_array_expr(arr_expr, es_node.loc, parse_ctx, 0, 0, filename, ir_program)
+        }
         NodeKind::VariableDeclaration(var_decl) => {
             post_parse_toplevel_var_decl(var_decl, es_node.loc, parse_ctx, filename, ir_program)
         }
@@ -1659,6 +1660,15 @@ fn post_parse_expr(
             filename,
             ir_program,
         ),
+        NodeKind::ArrayExpression(arr_expr) => post_parse_array_expr(
+            arr_expr,
+            es_expr.loc,
+            parse_ctx,
+            depth,
+            num_locals,
+            filename,
+            ir_program,
+        ),
         _ => pppanic(),
     }
 }
@@ -2070,6 +2080,35 @@ fn post_parse_direct_call_helper(
         filename,
         ir_program,
     )
+}
+
+#[allow(unused_variables)]
+fn post_parse_array_expr(
+    es_array_expr: ArrayExpression,
+    loc: Option<esSL>,
+    parse_ctx: &mut ParseState,
+    depth: usize,
+    num_locals: usize, // current number of IR locals
+    filename: Option<&str>,
+    ir_program: &mut ir::Program,
+) -> Result<ir::Expr, CompileMessage<ParseProgramError>> {
+    let ret = Vec::with_capacity(es_array_expr.elements.len());
+    for (i, el) in es_array_expr.elements.iter().enumerate() {
+        let ret_el = match el {
+            ArrayEntry::Literal(el) => {
+                post_parse_literal(*el, loc, parse_ctx, depth, num_locals, filename, ir_program)?
+            }
+            ArrayEntry::Identifier(el) => {
+                post_parse_varname(*el, loc, parse_ctx, depth, num_locals, filename, ir_program)?
+            }
+        };
+        ret[i] = ret_el;
+    }
+
+    Ok(ir::Expr {
+        vartype: Some(ir::VarType::Array),
+        kind: ir::ExprKind::PrimArray { elements: ret },
+    })
 }
 
 fn make_prim_undefined() -> ir::Expr {

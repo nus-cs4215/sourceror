@@ -56,6 +56,7 @@ pub enum NodeKind {
     ImportNamespaceSpecifier(ImportNamespaceSpecifier),
     ExportNamedDeclaration(ExportNamedDeclaration),
     ExportSpecifier(ExportSpecifier),
+    ArrayExpression(ArrayExpression),
 }
 
 #[derive(Deserialize, Debug)]
@@ -187,6 +188,17 @@ pub struct VariableDeclaration {
 pub struct VariableDeclarator {
     pub id: Box<Node>,
     pub init: Option<Box<Node>>,
+}
+
+#[derive(Deserialize, Debug)]
+pub enum ArrayEntry {
+    Literal(Literal), // Primitives: string, number, bool
+    Identifier(Identifier), // Object such as function, objects, arrays
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ArrayExpression {
+    pub elements: Vec<ArrayEntry>, 
 }
 
 #[derive(Deserialize, Debug)]
