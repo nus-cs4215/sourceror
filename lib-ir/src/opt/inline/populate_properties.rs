@@ -38,7 +38,10 @@ fn populate_properties(
             for oe in &**funcidxs {
                 set_has_indirect_calls(&mut func_props[oe.funcidx]);
             }
-        }
+        },
+        ExprKind::PrimArray {elements} => {
+            elements.iter_mut().map(|el| populate_properties(funcidx, el, func_props, site)).collect()
+        },
         ExprKind::TypeCast {
             test,
             expected: _,

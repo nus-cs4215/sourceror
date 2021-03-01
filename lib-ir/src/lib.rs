@@ -1,6 +1,6 @@
-use std::default::Default;
 use std::option::Option;
 use std::vec::Vec;
+use std::{default::Default};
 /**
  * The structs here represent the intermediate representation of the program.
  * In particular:
@@ -53,7 +53,9 @@ pub enum VarType {
     String,                     // reference type
     Func,                       // holds a function ptr and a closure
     StructT { typeidx: usize }, // reference type; typeid starts from zero and should be in range [0, object_types.len()).
+    Array,
 }
+
 impl Default for VarType {
     fn default() -> Self {
         VarType::Any
@@ -71,11 +73,12 @@ impl VarType {
             VarType::Boolean => 3,
             VarType::String => 4,
             VarType::Func => 5,
+            VarType::Array => 6,
             VarType::StructT { typeidx } => (NUM_PRIMITIVE_TAG_TYPES + typeidx) as i32,
         }
     }
 }
-pub const NUM_PRIMITIVE_TAG_TYPES: usize = 6; // does not include Any
+pub const NUM_PRIMITIVE_TAG_TYPES: usize = 7; // does not include Any
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub struct Import {
@@ -158,6 +161,10 @@ pub enum ExprKind {
     PrimStructT {
         typeidx: usize,
     }, // a struct (Any will be set to Unassigned variant; String, Func::closure, StructT will be set to something that the GC can recognise as a "null pointer" for that VarType)
+    PrimArray {
+        // TODONIG
+        elements: Vec<Expr>,
+    },
     PrimFunc {
         funcidxs: Box<[OverloadEntry]>, // overload set, matched in priority from back to front.  Backend shall coalesce identical callstubs whenever possible.
         closure: Box<Expr>, // Closure, that must be a pointer (that could be null) or undefined (encoded as a GC undefined/null, and no overload should want a closure param), and will be type-erased (the pointer requirement allows the GC to understand it)
@@ -308,7 +315,7 @@ impl Program {
     // The caller should only use the functions that match the funcidxs specified in the returned array of pre-declared operators.
     // Other things in the `funcs` array should not be used.
     pub fn new_with_imports(imports: Box<[Import]>) -> Program {
-        let mut program = Program {
+        let program = Program {
             struct_types: Default::default(),
             imports: imports,
             funcs: Default::default(),

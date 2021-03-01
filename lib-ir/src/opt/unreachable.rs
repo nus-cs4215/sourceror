@@ -35,6 +35,9 @@ fn optimize_expr(expr: &mut Expr) -> bool {
             funcidxs: _,
             closure,
         } => optimize_expr(&mut **closure),
+        ExprKind::PrimArray { elements } => elements
+            .into_iter()
+            .fold(false, |prev, arg| prev | optimize_expr(arg)),
         ExprKind::TypeCast {
             test,
             expected: _,

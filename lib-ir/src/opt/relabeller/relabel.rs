@@ -17,6 +17,9 @@ pub fn relabel(expr: &mut Expr, relabeller: &mut Relabeller) -> bool {
             funcidxs: _,
             closure,
         } => relabel(&mut **closure, relabeller),
+        ExprKind::PrimArray { elements } => elements
+            .into_iter()
+            .fold(false, |prev, arg| prev | relabel(arg, relabeller)),
         ExprKind::TypeCast {
             test,
             expected: _,

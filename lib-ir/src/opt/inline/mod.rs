@@ -183,6 +183,7 @@ struct SiteProperties {
 }
 
 impl SiteProperties {
+    #[allow(dead_code)]
     fn new() -> Self {
         Self {
             num_locals: 0,

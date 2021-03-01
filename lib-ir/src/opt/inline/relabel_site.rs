@@ -32,6 +32,11 @@ fn relabel_site(expr: &mut Expr, site: SiteProperties, num_landings: usize) -> b
             funcidxs: _,
             closure,
         } => relabel_site(&mut **closure, site, num_landings),
+        ExprKind::PrimArray {elements} => {
+            elements.into_iter().fold(false, |prev, arg| {
+                prev | relabel_site(arg, site, num_landings)
+            })
+        },
         ExprKind::TypeCast {
             test,
             expected: _,

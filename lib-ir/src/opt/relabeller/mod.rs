@@ -12,6 +12,7 @@ pub struct Relabeller {
     num_new: usize,               // this is the expected new index of the next added thing
 }
 
+#[allow(dead_code)]
 impl Relabeller {
     /**
      * Initialize empty.
