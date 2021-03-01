@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::option::Option;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct SourceLocation {
     pub source: Option<String>,
     pub start: Position,
@@ -121,6 +121,7 @@ pub struct VarAttr {
     pub address_taken: bool,
 }*/
 
+#[allow(dead_code)]
 pub type FunctionBody = BlockStatement;
 
 #[derive(Deserialize, Debug)]

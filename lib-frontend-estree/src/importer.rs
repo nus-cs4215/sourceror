@@ -172,7 +172,7 @@ fn make_vartype(type_name: &str) -> Option<ImportValType> {
 
 pub fn make_export_state(
     import_spec: ImportSpec,
-    order: usize,
+    _order: usize,
     import_funcidx_map: &HashMap<ir::Import, ir::FuncIdx>,
 ) -> (ProgramPreExports, ParseState) {
     let mut pre_exports: ProgramPreExports = VarCtx::new();

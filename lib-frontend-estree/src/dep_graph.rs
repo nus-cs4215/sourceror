@@ -2,7 +2,6 @@ use crate::error::DepError;
 use crate::error::FetcherError;
 use crate::error::GraphError;
 use crate::import_name_resolver;
-use async_trait::async_trait;
 use projstd::log::CompileMessage;
 use projstd::log::SourceLocationRef as plSLRef;
 use std::boxed::Box;
@@ -64,7 +63,7 @@ where
                     .await?,
             );
         }
-        let idx = graph.nodes.len();
+        // let idx = graph.nodes.len();
         graph.nodes.push(GraphNode {
             deps: deps,
             content: t,
@@ -72,6 +71,7 @@ where
         });
         Ok(graph)
     }
+
     fn get_or_fetch_node_recursive<'b, F: 'b + Fetcher<T>>(
         &'b mut self,
         mut candidate_resolved_names: impl Iterator<Item = String> + 'static,
@@ -149,6 +149,7 @@ impl<T> Graph<T> {
         states.reserve(self.nodes.len());
         for (i, node) in self.nodes.into_iter().enumerate() {
             let depstates: Box<[&S]> = node.deps.into_iter().map(|x| &states[x]).collect();
+            #[allow(mutable_borrow_reservation_conflict)]
             states.push(f(i, depstates, node.content, node.name)?);
         }
         Ok(())

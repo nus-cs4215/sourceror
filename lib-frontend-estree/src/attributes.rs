@@ -41,7 +41,7 @@ impl NodeForEachWithAttributes<Node> for [Node] {
                     loc: _,
                     kind:
                         NodeKind::AssignmentExpression(AssignmentExpression {
-                            operator,
+                            operator: _operator,
                             left,
                             right,
                         }),
@@ -86,7 +86,7 @@ impl NodeForEachWithAttributes<Node> for [Node] {
                     }
                 }
             }
-            f(node, prev_attr.map_or_else(|| HashMap::new(), |(x, sl)| x))?;
+            f(node, prev_attr.map_or_else(|| HashMap::new(), |(x, _sl)| x))?;
             prev_attr = None;
         }
         if let Some((_, sl)) = prev_attr {
@@ -135,7 +135,7 @@ impl NodeForEachWithAttributesMut<Node> for [Node] {
                     loc: _,
                     kind:
                         NodeKind::AssignmentExpression(AssignmentExpression {
-                            operator,
+                            operator: _operator,
                             left,
                             right,
                         }),
@@ -180,7 +180,7 @@ impl NodeForEachWithAttributesMut<Node> for [Node] {
                     }
                 }
             }
-            f(node, prev_attr.map_or_else(|| HashMap::new(), |(x, sl)| x))?;
+            f(node, prev_attr.map_or_else(|| HashMap::new(), |(x, _sl)| x))?;
             prev_attr = None;
         }
         if let Some((_, sl)) = prev_attr {
@@ -225,7 +225,7 @@ impl<C: IntoIterator<Item = Node>> NodeForEachWithAttributesInto<Node> for C {
                     loc: _,
                     kind:
                         NodeKind::AssignmentExpression(AssignmentExpression {
-                            operator,
+                            operator: _operator,
                             left,
                             right,
                         }),
@@ -270,7 +270,7 @@ impl<C: IntoIterator<Item = Node>> NodeForEachWithAttributesInto<Node> for C {
                     }
                 }
             }
-            f(node, prev_attr.map_or_else(|| HashMap::new(), |(x, sl)| x))?;
+            f(node, prev_attr.map_or_else(|| HashMap::new(), |(x, _sl)| x))?;
             prev_attr = None;
         }
         if let Some((_, sl)) = prev_attr {

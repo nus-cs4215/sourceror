@@ -12,8 +12,8 @@ use crate::extensions::IntoSourceLocation;
 use crate::frontendvar::*;
 use projstd::log::CompileMessage;
 use std::collections::HashSet;
-use std::collections::{BTreeMap, BTreeSet};
-use std::{collections::HashMap, ops::Mul, usize};
+use std::collections::{BTreeMap};
+use std::{collections::HashMap, usize};
 
 /**
  * Pre-parse an ESTree program
@@ -401,7 +401,10 @@ fn pre_parse_expr_statement(
                     loc: _,
                     kind: NodeKind::Identifier(Identifier { name, prevar }),
                 } => {
-                    let rhs_expr = pre_parse_expr(&mut **right, name_ctx, depth, filename)?;
+                    let rhs_expr = match pre_parse_expr(&mut **right, name_ctx, depth, filename)? {
+                        MultipleOrSingleBTreeMap::BTreeMap(rhs_expr) => rhs_expr,
+                        _ => unreachable!()
+                    };
                     let resvar = *name_ctx.get(name.as_str()).unwrap();
                     assert!(*prevar == Some(resvar)); // they should already have a prevar attached
                                                       // note: this is probably a bug, they would not have prevar attached yet...
@@ -437,7 +440,11 @@ fn pre_parse_expr_statement(
             )),
         }
     } else {
-        pre_parse_expr(es_expr_node, name_ctx, depth, filename)
+        let ret = match pre_parse_expr(es_expr_node, name_ctx, depth, filename)? {
+            MultipleOrSingleBTreeMap::BTreeMap(ret) => ret,
+            _ => unreachable!()
+        };
+        Ok(ret)
     }
 }
 
@@ -449,7 +456,11 @@ fn pre_parse_return_statement(
     filename: Option<&str>,
 ) -> Result<BTreeMap<VarLocId, Usage>, CompileMessage<ParseProgramError>> {
     if let Some(box_node) = &mut es_return.argument {
-        pre_parse_expr(&mut *box_node, name_ctx, depth, filename)
+        let ret = match pre_parse_expr(&mut *box_node, name_ctx, depth, filename)? {
+           MultipleOrSingleBTreeMap::BTreeMap(ret)  => ret,
+           _ => unreachable!()
+        };
+        Ok(ret)
     } else {
         Err(CompileMessage::new_error(
             loc.into_sl(filename).to_owned(),
@@ -468,8 +479,13 @@ fn pre_parse_if_statement(
     if let NodeKind::BlockStatement(es_true_block) = &mut es_if.consequent.kind {
         if let Some(es_false_node) = &mut es_if.alternate {
             if let NodeKind::BlockStatement(es_false_block) = &mut es_false_node.kind {
+                let first = match pre_parse_expr(&mut *es_if.test, name_ctx, depth, filename)? {
+                    MultipleOrSingleBTreeMap::BTreeMap(first) => first,
+                    _ => unreachable!()
+                };
+
                 Ok(varusage::merge_series(
-                    pre_parse_expr(&mut *es_if.test, name_ctx, depth, filename)?,
+                    first,
                     varusage::merge_parallel(
                         pre_parse_block_statement(
                             es_true_block,
@@ -653,7 +669,10 @@ fn pre_parse_var_decl(
                             kind: NodeKind::Identifier(Identifier { name, prevar }),
                         } => {
                             if let Some(expr) = init {
-                                let rhs_expr = pre_parse_expr(expr, name_ctx, depth, filename)?;
+                                let rhs_expr = match pre_parse_expr(expr, name_ctx, depth, filename)? {
+                                    MultipleOrSingleBTreeMap::BTreeMap(rhs_expr) => rhs_expr,
+                                    _ => unreachable!()
+                                };
                                 let resvar = *name_ctx.get(name.as_str()).unwrap();
                                 *prevar = Some(resvar);
                                 let varlocid = match resvar {
@@ -913,8 +932,8 @@ fn pre_parse_expr(
                 })
         }
         NodeKind::ArrayExpression(arr_expr) => {
-            let ret = Vec::with_capacity(arr_expr.elements.len());
-            for i in 0..arr_expr.elements.len() {
+            let mut ret = Vec::with_capacity(arr_expr.elements.len());
+            for _ in 0..arr_expr.elements.len() {
                 ret.push(BTreeMap::new());
             }
             Ok(MultipleOrSingleBTreeMap::MultipleBtreeMap(ret))

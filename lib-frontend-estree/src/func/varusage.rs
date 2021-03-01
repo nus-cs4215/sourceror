@@ -52,6 +52,7 @@ pub fn wrap_closure(m: BTreeMap<VarLocId, Usage>) -> BTreeMap<VarLocId, Usage> {
 /**
  * Wrap the given map in a loop, doing the necessary usage transformations to represent a loop.
  */
+#[allow(dead_code)]
 pub fn wrap_loop(m: BTreeMap<VarLocId, Usage>) -> BTreeMap<VarLocId, Usage> {
     transform_btreemap_values(m, Usage::repeat)
 }

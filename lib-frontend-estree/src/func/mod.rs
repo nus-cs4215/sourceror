@@ -109,7 +109,7 @@ pub fn parse_program(
     deps: Box<[&(ProgramPreExports, ParseState)]>,
     start_idx: &mut usize,
     filename: Option<String>,
-    order: usize,
+    _order: usize,
     ir_program: &mut ir::Program,
     ir_toplevel_seq: &mut Vec<ir::Expr>,
 ) -> Result<(ProgramPreExports, ParseState), CompileMessage<ParseProgramError>> {

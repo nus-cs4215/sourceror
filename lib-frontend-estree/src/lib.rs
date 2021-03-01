@@ -11,7 +11,6 @@ mod import_name_resolver;
 mod importer;
 mod parse_state;
 
-use async_trait::async_trait;
 use error::*;
 use extensions::IntoSourceLocation;
 use frontendvar::*;
@@ -19,13 +18,10 @@ use ir;
 use projstd::log::CompileMessage;
 use projstd::log::LogErr;
 use projstd::log::Logger;
-use projstd::log::Severity;
 use projstd::log::SourceLocationRef as plSLRef;
 use serde_json;
 use std::collections::HashMap;
-use std::fmt;
 use std::future::Future;
-use std::marker::Send;
 use std::result::Result;
 
 use estree::*;
@@ -117,7 +113,7 @@ impl<'a> dep_graph::ExtractDeps<'a> for SourceItem {
                     None
                 }),
             ),
-            SourceItem::ImportSpec(import_spec) => Box::new(std::iter::empty()),
+            SourceItem::ImportSpec(_import_spec) => Box::new(std::iter::empty()),
         }
     }
 }
@@ -159,7 +155,7 @@ pub async fn run_frontend<
                 None
             }
         })
-        .flat_map(|import_spec| import_spec.content.iter().map(|(name, import)| import))
+        .flat_map(|import_spec| import_spec.content.iter().map(|(_name, import)| import))
         .cloned()
         .collect();
 

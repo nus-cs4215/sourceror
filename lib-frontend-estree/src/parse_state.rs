@@ -1,6 +1,5 @@
 use super::frontendvar::*;
 use crate::estree::*;
-use ir::superset::Superset;
 use std::collections::HashMap;
 
 #[derive(Default, Clone, Debug)]

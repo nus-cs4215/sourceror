@@ -28,7 +28,7 @@ use std::result::Result;
  */
 pub fn post_parse_program(
     es_program: Program,
-    loc: Option<esSL>,
+    _loc: Option<esSL>,
     parse_ctx: &mut ParseState,
     deps: &[&ParseState],
     filename: Option<&str>,
@@ -611,7 +611,7 @@ fn post_parse_direct_function(
     loc: Option<esSL>,
     parse_ctx: &mut ParseState,
     depth: usize,
-    num_locals: usize, // we don't care about the existing number of locals, because we start from zero when in a new function
+    _num_locals: usize, // we don't care about the existing number of locals, because we start from zero when in a new function
     filename: Option<&str>,
     ir_program: &mut ir::Program,
 ) -> Result<(), CompileMessage<ParseProgramError>> {
@@ -997,7 +997,7 @@ fn post_parse_toplevel_statement(
     es_node: Node,
     attributes: HashMap<String, Option<String>>,
     parse_ctx: &mut ParseState,
-    deps: &[&ParseState],
+    _deps: &[&ParseState],
     filename: Option<&str>,
     ir_program: &mut ir::Program,
     exports: &mut ParseState,
@@ -1062,7 +1062,7 @@ fn post_parse_toplevel_statement(
         NodeKind::VariableDeclaration(var_decl) => {
             post_parse_toplevel_var_decl(var_decl, es_node.loc, parse_ctx, filename, ir_program)
         }
-        NodeKind::ImportDeclaration(import_decl) => Ok(make_prim_undefined()),
+        NodeKind::ImportDeclaration(_import_decl) => Ok(make_prim_undefined()),
         NodeKind::ExportNamedDeclaration(export_decl) => {
             post_parse_toplevel_export_decl(
                 export_decl,
@@ -1095,14 +1095,14 @@ fn post_parse_toplevel_statement(
 
 fn post_parse_toplevel_export_decl(
     es_export_decl: ExportNamedDeclaration,
-    loc: Option<esSL>,
+    _loc: Option<esSL>,
     parse_ctx: &ParseState,
-    filename: Option<&str>,
+    _filename: Option<&str>,
     exports: &mut ParseState,
 ) -> Result<(), CompileMessage<ParseProgramError>> {
     for export_spec_node in es_export_decl.specifiers {
         let export_spec = as_export_spec(export_spec_node);
-        let exported_id = as_id(*export_spec.exported);
+        let _exported_id = as_id(*export_spec.exported);
         let local_id = as_id(*export_spec.local);
         match local_id.prevar.unwrap() {
             PreVar::Target(varlocid) => {
@@ -1122,7 +1122,7 @@ fn post_parse_toplevel_export_decl(
 
 fn post_parse_expr_statement(
     es_expr_stmt: ExpressionStatement,
-    loc: Option<esSL>,
+    _loc: Option<esSL>,
     parse_ctx: &mut ParseState,
     depth: usize,
     num_locals: usize, // current number of IR locals
@@ -1145,7 +1145,7 @@ fn post_parse_expr_statement(
 
 fn post_parse_return_statement(
     es_return: ReturnStatement,
-    loc: Option<esSL>,
+    _loc: Option<esSL>,
     parse_ctx: &mut ParseState,
     depth: usize,
     num_locals: usize, // current number of IR locals
@@ -1171,7 +1171,7 @@ fn post_parse_return_statement(
 
 fn post_parse_if_statement(
     es_if: IfStatement,
-    loc: Option<esSL>,
+    _loc: Option<esSL>,
     parse_ctx: &mut ParseState,
     depth: usize,
     num_locals: usize, // current number of IR locals
@@ -1307,7 +1307,7 @@ fn post_parse_func_decl<I: Iterator<Item = (Node, HashMap<String, Option<String>
 
 fn post_parse_var_decl<I: Iterator<Item = (Node, HashMap<String, Option<String>>)>>(
     es_var_decl: VariableDeclaration,
-    loc: Option<esSL>,
+    _loc: Option<esSL>,
     parse_ctx: &mut ParseState,
     mut more_stmt_attr_iter: I,
     depth: usize,
@@ -1521,7 +1521,7 @@ fn post_parse_decl_helper<
 
 fn post_parse_toplevel_var_decl(
     es_var_decl: VariableDeclaration,
-    loc: Option<esSL>,
+    _loc: Option<esSL>,
     parse_ctx: &mut ParseState,
     filename: Option<&str>,
     ir_program: &mut ir::Program,
@@ -1745,12 +1745,12 @@ fn post_parse_direct_varname(
 
 fn post_parse_literal(
     es_literal: Literal,
-    loc: Option<esSL>,
-    parse_ctx: &mut ParseState,
-    depth: usize,
-    num_locals: usize, // current number of IR locals
-    filename: Option<&str>,
-    ir_program: &mut ir::Program,
+    _loc: Option<esSL>,
+    _parse_ctx: &mut ParseState,
+    _depth: usize,
+    _num_locals: usize, // current number of IR locals
+    _filename: Option<&str>,
+    _ir_program: &mut ir::Program,
 ) -> Result<ir::Expr, CompileMessage<ParseProgramError>> {
     match es_literal.value {
         LiteralValue::String(string_val) => Ok(ir::Expr {
@@ -1899,7 +1899,7 @@ fn post_parse_assign_expr(
 
 fn post_parse_cond_expr(
     es_cond_expr: ConditionalExpression,
-    loc: Option<esSL>,
+    _loc: Option<esSL>,
     parse_ctx: &mut ParseState,
     depth: usize,
     num_locals: usize, // current number of IR locals
@@ -2092,14 +2092,15 @@ fn post_parse_array_expr(
     filename: Option<&str>,
     ir_program: &mut ir::Program,
 ) -> Result<ir::Expr, CompileMessage<ParseProgramError>> {
-    let ret = Vec::with_capacity(es_array_expr.elements.len());
-    for (i, el) in es_array_expr.elements.iter().enumerate() {
+    let mut ret = Vec::with_capacity(es_array_expr.elements.len());
+    for (i, el) in es_array_expr.elements.into_iter().enumerate() {
+        let cloned_loc = loc.clone();
         let ret_el = match el {
             ArrayEntry::Literal(el) => {
-                post_parse_literal(*el, loc, parse_ctx, depth, num_locals, filename, ir_program)?
+                post_parse_literal(el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program)?
             }
             ArrayEntry::Identifier(el) => {
-                post_parse_varname(*el, loc, parse_ctx, depth, num_locals, filename, ir_program)?
+                post_parse_varname(el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program)?
             }
         };
         ret[i] = ret_el;
@@ -2152,6 +2153,7 @@ fn as_var_decr_ref(es_node: &Node) -> &VariableDeclarator {
     }
 }
 
+#[allow(dead_code)]
 fn as_import_spec(es_node: Node) -> ImportSpecifier {
     if let NodeKind::ImportSpecifier(import_spec) = es_node.kind {
         import_spec
@@ -2225,6 +2227,7 @@ fn as_ir_sl(opt_es_sl: &Option<SourceLocation>, fileidx: u32) -> ir::SourceLocat
     }
 }
 
+#[allow(unused_attributes)]
 #[feature(never_type)]
 fn pppanic() -> ! {
     panic!("pre_parse() should have detected this error");
