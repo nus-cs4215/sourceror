@@ -5,3 +5,7 @@ Cargo.lock
 /stage-wasmtest
 /node_modules
 /dist
+
+log*
+*.ir
+*.wasm
