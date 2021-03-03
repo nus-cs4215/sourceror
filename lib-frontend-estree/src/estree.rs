@@ -192,6 +192,7 @@ pub struct VariableDeclarator {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(untagged)]
 pub enum ArrayEntry {
     Literal(Literal), // Primitives: string, number, bool
     Identifier(Identifier), // Object such as function, objects, arrays
