@@ -8,6 +8,7 @@ export { makePlatformImports } from "./platform";
 import { Transcoder } from "./transcoder";
 export { Transcoder };
 import { cachedGetFile } from "./cache";
+import { tailCall } from "wasm-feature-detect";
 
 export class CompileError extends Error {
   constructor(message: string) {
@@ -216,6 +217,18 @@ export async function run(
   context: Context,
 ): Promise<any> {
   const real_imports = Object.assign({}, platform);
+
+  tailCall().then((tailCallSupported) => {
+    if (tailCallSupported) {
+      // TODONIG: initialize something like wasm_module.optimize_tail_calls()??
+      console.info("Tail call supported")
+    } else {
+      console.info("Tail call not supported")
+    }
+  }).catch(err => {
+    throw new RuntimeError(err);
+  })
+
   real_imports.core = {
     error: (
       code: number,
