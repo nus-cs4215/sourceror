@@ -1,5 +1,6 @@
 
-# Sourceror
+# Sourceror 
+[![CI](https://github.com/nus-cs4215/sourceror/actions/workflows/ci.yml/badge.svg)](https://github.com/nus-cs4215/sourceror/actions/workflows/ci.yml)
 
 Sourceror is a compiler from Source to WebAssembly, written in Rust.  For deployment, the compiler is itself compiled to WebAssembly using the existing Rust toolchain.  It is also possible to compile the compiler to the native binary format and architecture (e.g. x86), which is useful for debugging.
 
