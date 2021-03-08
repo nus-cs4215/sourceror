@@ -1128,6 +1128,11 @@ verror@1.10.0:
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
 
+wasm-feature-detect@^1.2.9:
+  version "1.2.9"
+  resolved "https://registry.yarnpkg.com/wasm-feature-detect/-/wasm-feature-detect-1.2.9.tgz#857e5ddc16a476c50be0bff7cd4ac875d60041c1"
+  integrity sha512-2E9/gtLVLpv2wnZDyYv8WY2dR9gHbmyv5uhZsnOcMSzqc78aGZpKQORPNcnrPwAU23nFUo7GAwKuoTAWRgsJ7Q==
+
 wasm-pack@^0.9.1:
   version "0.9.1"
   resolved "https://registry.yarnpkg.com/wasm-pack/-/wasm-pack-0.9.1.tgz#f1e80814c7197a469e700ff15b6c16cad5dbb2ae"
