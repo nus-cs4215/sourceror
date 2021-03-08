@@ -16,8 +16,8 @@ export function destroyContext(context: Context) {
   delete contexts[context];
 }
 
-export function compile(context: Context, code: string) {
-  return LoadWasm().then(module => module.compile(context, code));
+export function compile(context: Context, code: string, enableTailCalls: boolean) {
+  return LoadWasm().then(module => module.compile(context, code, enableTailCalls));
 }
 
 function compilerLog(context: Context, severity: number, location_file: string, location_start_line: number, location_start_column: number, location_end_line: number, location_end_column: number, message: string) {

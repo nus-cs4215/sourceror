@@ -134,7 +134,11 @@ export async function compile(
 			);
 		}
 	);
-	return Sourceror.compile(wasm_context, es_str)
+
+	let isTailCallSupported = await tailCall();
+	console.info("WASM Tail Calls supported: ", isTailCallSupported);
+
+	return Sourceror.compile(wasm_context, es_str, isTailCallSupported)
 		.then((wasm_binary: Uint8Array) => {
 			if (wasm_binary.byteLength > 0) {
 				return WebAssembly.compile(wasm_binary).catch((err: string) => {
@@ -237,19 +241,6 @@ export async function run(
 	context: Context
 ): Promise<any> {
 	const real_imports = Object.assign({}, platform);
-
-	tailCall()
-		.then((tailCallSupported) => {
-			if (tailCallSupported) {
-				// TODONIG: initialize something like wasm_module.optimize_tail_calls()??
-				console.info("Tail call supported");
-			} else {
-				console.info("Tail call not supported");
-			}
-		})
-		.catch((err) => {
-			throw new RuntimeError(err);
-		});
 
 	real_imports.core = {
 		error: (
