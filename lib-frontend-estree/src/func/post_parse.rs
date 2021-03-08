@@ -2103,7 +2103,7 @@ fn post_parse_array_expr(
                 post_parse_varname(el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program)?
             }
         };
-        ret[i] = ret_el;
+        ret.push(ret_el);
     }
 
     Ok(ir::Expr {

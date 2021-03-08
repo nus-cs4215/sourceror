@@ -11,8 +11,8 @@ use crate::estree::*;
 use crate::extensions::IntoSourceLocation;
 use crate::frontendvar::*;
 use projstd::log::CompileMessage;
+use std::collections::BTreeMap;
 use std::collections::HashSet;
-use std::collections::{BTreeMap};
 use std::{collections::HashMap, usize};
 
 /**
@@ -204,7 +204,7 @@ fn pre_parse_function<F: Function + Scope>(
         // no variables to add, since it is just a return expr
         let usages = match pre_parse_expr(body, name_ctx, new_depth, filename)? {
             MultipleOrSingleBTreeMap::BTreeMap(usages) => usages,
-            _ => unreachable!()
+            _ => unreachable!(),
         };
         ret_usages = varusage::merge_series(ret_usages, usages);
 
@@ -341,6 +341,10 @@ fn pre_parse_statement(
         NodeKind::VariableDeclaration(var_decl) => {
             pre_parse_var_decl(var_decl, &es_node.loc, name_ctx, depth, filename)
         }
+        NodeKind::ArrayExpression(arr_expr) => {
+            println!("here, {:?}", arr_expr);
+            unreachable!()
+        }
         NodeKind::EmptyStatement(_) => Ok(BTreeMap::new()), // EmptyStatement does not use any variables
         NodeKind::DebuggerStatement(_)
         | NodeKind::WithStatement(_)
@@ -403,7 +407,7 @@ fn pre_parse_expr_statement(
                 } => {
                     let rhs_expr = match pre_parse_expr(&mut **right, name_ctx, depth, filename)? {
                         MultipleOrSingleBTreeMap::BTreeMap(rhs_expr) => rhs_expr,
-                        _ => unreachable!()
+                        _ => unreachable!(),
                     };
                     let resvar = *name_ctx.get(name.as_str()).unwrap();
                     assert!(*prevar == Some(resvar)); // they should already have a prevar attached
@@ -442,7 +446,7 @@ fn pre_parse_expr_statement(
     } else {
         let ret = match pre_parse_expr(es_expr_node, name_ctx, depth, filename)? {
             MultipleOrSingleBTreeMap::BTreeMap(ret) => ret,
-            _ => unreachable!()
+            _ => unreachable!(),
         };
         Ok(ret)
     }
@@ -457,8 +461,8 @@ fn pre_parse_return_statement(
 ) -> Result<BTreeMap<VarLocId, Usage>, CompileMessage<ParseProgramError>> {
     if let Some(box_node) = &mut es_return.argument {
         let ret = match pre_parse_expr(&mut *box_node, name_ctx, depth, filename)? {
-           MultipleOrSingleBTreeMap::BTreeMap(ret)  => ret,
-           _ => unreachable!()
+            MultipleOrSingleBTreeMap::BTreeMap(ret) => ret,
+            _ => unreachable!(),
         };
         Ok(ret)
     } else {
@@ -481,7 +485,7 @@ fn pre_parse_if_statement(
             if let NodeKind::BlockStatement(es_false_block) = &mut es_false_node.kind {
                 let first = match pre_parse_expr(&mut *es_if.test, name_ctx, depth, filename)? {
                     MultipleOrSingleBTreeMap::BTreeMap(first) => first,
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
 
                 Ok(varusage::merge_series(
@@ -669,27 +673,67 @@ fn pre_parse_var_decl(
                             kind: NodeKind::Identifier(Identifier { name, prevar }),
                         } => {
                             if let Some(expr) = init {
-                                let rhs_expr = match pre_parse_expr(expr, name_ctx, depth, filename)? {
-                                    MultipleOrSingleBTreeMap::BTreeMap(rhs_expr) => rhs_expr,
-                                    _ => unreachable!()
-                                };
-                                let resvar = *name_ctx.get(name.as_str()).unwrap();
-                                *prevar = Some(resvar);
-                                let varlocid = match resvar {
-                                    PreVar::Target(varlocid) => varlocid,
-                                    PreVar::Direct => panic!("ICE: Should be VarLocId"),
-                                };
-                                if varlocid.depth == 0 {
-                                    // it is a global variable, but don't do anything because it doesn't count as a usage
-                                    Ok(rhs_expr)
-                                } else {
-                                    // it's not a global variable
-                                    // say that we used this variable
-                                    // the RHS comes first because the RHS is evaluated first before doing the actual assignment
-                                    Ok(varusage::merge_series(
-                                        rhs_expr,
-                                        varusage::from_modified(varlocid),
-                                    ))
+                                match pre_parse_expr(expr, name_ctx, depth, filename)? {
+                                    MultipleOrSingleBTreeMap::BTreeMap(rhs_expr) => {
+                                        let resvar = *name_ctx.get(name.as_str()).unwrap();
+                                        *prevar = Some(resvar);
+                                        let varlocid = match resvar {
+                                            PreVar::Target(varlocid) => varlocid,
+                                            PreVar::Direct => panic!("ICE: Should be VarLocId"),
+                                        };
+                                        if varlocid.depth == 0 {
+                                            // it is a global variable, but don't do anything because it doesn't count as a usage
+                                            Ok(rhs_expr)
+                                        } else {
+                                            // it's not a global variable
+                                            // say that we used this variable
+                                            // the RHS comes first because the RHS is evaluated first before doing the actual assignment
+                                            Ok(varusage::merge_series(
+                                                rhs_expr,
+                                                varusage::from_modified(varlocid),
+                                            ))
+                                        }
+                                    }
+                                    MultipleOrSingleBTreeMap::MultipleBtreeMap(expressions) => {
+                                        // TODONIG : not appending to prevar for arrays
+                                        let ret = expressions
+                                            .into_iter()
+                                            .map(|expr| {
+                                                let resvar = *name_ctx.get(name.as_str()).unwrap();
+                                                *prevar = Some(resvar);
+                                                let varlocid = match resvar {
+                                                    PreVar::Target(varlocid) => varlocid,
+                                                    PreVar::Direct => {
+                                                        panic!("ICE: Should be VarLocId")
+                                                    }
+                                                };
+                                                if varlocid.depth == 0 {
+                                                    expr
+                                                } else {
+                                                    varusage::merge_series(
+                                                        expr,
+                                                        varusage::from_modified(varlocid),
+                                                    )
+                                                }
+                                            })
+                                            .fold(None, |prev, current| match prev {
+                                                Some(prev) => {
+                                                    Some(varusage::merge_series(prev, current))
+                                                }
+                                                None => Some(current),
+                                            });
+
+                                        if let Some(ret) = ret {
+                                            Ok(ret)
+                                        } else {
+                                            Err(CompileMessage::new_error(
+                                                decl.loc.into_sl(filename).to_owned(),
+                                                ParseProgramError::SourceRestrictionError(
+                                                    "Unable to parse multiple BTRee Maps",
+                                                ),
+                                            ))
+                                        }
+                                    }
                                 }
                             } else {
                                 Err(CompileMessage::new_error(
@@ -806,7 +850,8 @@ fn pre_parse_expr(
 ) -> Result<MultipleOrSingleBTreeMap, CompileMessage<ParseProgramError>> {
     match &mut es_expr.kind {
         NodeKind::Identifier(identifier) => {
-            let ret = pre_parse_identifier_use(identifier, &es_expr.loc, name_ctx, depth, filename)?;
+            let ret =
+                pre_parse_identifier_use(identifier, &es_expr.loc, name_ctx, depth, filename)?;
             Ok(MultipleOrSingleBTreeMap::BTreeMap(ret))
         }
         NodeKind::Literal(literal) => match literal.value {
@@ -845,17 +890,17 @@ fn pre_parse_expr(
             // both sides of the operator are always evaluated, and JS requires left-to-right evaluation
             let lhs = match pre_parse_expr(&mut *binary_expr.left, name_ctx, depth, filename)? {
                 MultipleOrSingleBTreeMap::BTreeMap(lhs) => lhs,
-                _ => unreachable!()
+                _ => unreachable!(),
             };
-            
+
             let rhs = match pre_parse_expr(&mut *binary_expr.right, name_ctx, depth, filename)? {
-                
-                MultipleOrSingleBTreeMap::BTreeMap(rhs)  => rhs,
-                _ => unreachable!()
+                MultipleOrSingleBTreeMap::BTreeMap(rhs) => rhs,
+                _ => unreachable!(),
             };
 
-            Ok(MultipleOrSingleBTreeMap::BTreeMap(varusage::merge_series(lhs, rhs)))
-
+            Ok(MultipleOrSingleBTreeMap::BTreeMap(varusage::merge_series(
+                lhs, rhs,
+            )))
         }
         NodeKind::AssignmentExpression(_) => Err(CompileMessage::new_error(
             es_expr.loc.into_sl(filename).to_owned(),
@@ -869,37 +914,40 @@ fn pre_parse_expr(
             // let lhs = pre_parse_expr(&mut *logical_expr.left, name_ctx, depth, filename)?;
 
             let lhs = match pre_parse_expr(&mut *logical_expr.left, name_ctx, depth, filename)? {
-                MultipleOrSingleBTreeMap::BTreeMap(lhs)  => lhs,
-                _ => unreachable!()
-            };
-            
-            let rhs = match pre_parse_expr(&mut *logical_expr.right, name_ctx, depth, filename)? {
-                MultipleOrSingleBTreeMap::BTreeMap(rhs)  => rhs,
-                _ => unreachable!()
+                MultipleOrSingleBTreeMap::BTreeMap(lhs) => lhs,
+                _ => unreachable!(),
             };
 
-            Ok(MultipleOrSingleBTreeMap::BTreeMap(varusage::merge_series(lhs, rhs)))
+            let rhs = match pre_parse_expr(&mut *logical_expr.right, name_ctx, depth, filename)? {
+                MultipleOrSingleBTreeMap::BTreeMap(rhs) => rhs,
+                _ => unreachable!(),
+            };
+
+            Ok(MultipleOrSingleBTreeMap::BTreeMap(varusage::merge_series(
+                lhs, rhs,
+            )))
         }
         NodeKind::ConditionalExpression(cond_expr) => {
             // conditional expression, i.e. a ? b : c
             // like an if-statement, the returned result is a + (b | c)
             let test = match pre_parse_expr(&mut *cond_expr.test, name_ctx, depth, filename)? {
                 MultipleOrSingleBTreeMap::BTreeMap(test) => test,
-                _ => unreachable!()
+                _ => unreachable!(),
             };
 
-            let true_ret = match pre_parse_expr(&mut *cond_expr.consequent, name_ctx, depth, filename)? {
-                MultipleOrSingleBTreeMap::BTreeMap(true_ret) => true_ret,
-                _ => unreachable!()
-            };
+            let true_ret =
+                match pre_parse_expr(&mut *cond_expr.consequent, name_ctx, depth, filename)? {
+                    MultipleOrSingleBTreeMap::BTreeMap(true_ret) => true_ret,
+                    _ => unreachable!(),
+                };
 
-            let false_ret = match pre_parse_expr(&mut *cond_expr.alternate, name_ctx, depth, filename)? {
-                MultipleOrSingleBTreeMap::BTreeMap(false_ret) => false_ret,
-                _ => unreachable!()
-            };
+            let false_ret =
+                match pre_parse_expr(&mut *cond_expr.alternate, name_ctx, depth, filename)? {
+                    MultipleOrSingleBTreeMap::BTreeMap(false_ret) => false_ret,
+                    _ => unreachable!(),
+                };
 
-            Ok(MultipleOrSingleBTreeMap::BTreeMap(
-                varusage::merge_series(
+            Ok(MultipleOrSingleBTreeMap::BTreeMap(varusage::merge_series(
                 test,
                 varusage::merge_parallel(true_ret, false_ret),
             )))
@@ -916,17 +964,16 @@ fn pre_parse_expr(
                     r_prev.and_then(|prev| {
                         let prev = match prev {
                             MultipleOrSingleBTreeMap::BTreeMap(prev) => prev,
-                            _ => unreachable!()
+                            _ => unreachable!(),
                         };
 
                         let next = match pre_parse_expr(arg, name_ctx, depth, filename)? {
                             MultipleOrSingleBTreeMap::BTreeMap(next) => next,
-                            _ => unreachable!()
+                            _ => unreachable!(),
                         };
 
                         Ok(MultipleOrSingleBTreeMap::BTreeMap(varusage::merge_series(
-                            prev,
-                            next
+                            prev, next,
                         )))
                     })
                 })
@@ -963,9 +1010,7 @@ fn pre_parse_identifier_use(
                     } else {
                         // it's not a global variable
                         // say that we used this variable
-                        Ok(varusage::from_used(
-                            varlocid,
-                        ))
+                        Ok(varusage::from_used(varlocid))
                     }
                 }
                 PreVar::Direct => {
