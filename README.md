@@ -59,6 +59,8 @@ yarn link sourceror
 
 in the root of the other project.
 
+The link is symbolic and any changes when rebuilding Sourceror will be detected by other projects such as `cadet-frontend`.
+
 ## Native binary
 
 Sourceror can be compiled as a native binary for debugging purposes.  You can do
