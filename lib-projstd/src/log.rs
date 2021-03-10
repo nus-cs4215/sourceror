@@ -1,7 +1,21 @@
+use std::fmt::Debug;
+
 use crate::subslice::SubsliceOffset;
-use std::fmt::Display;
+use wasm_bindgen::prelude::*;
 
 // This module contains stuff for platform independent compiler error printing.
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
+pub fn wrapped_log(s: &str) {
+    unsafe {
+        log(&("Debug log from rust: ".to_owned() + &s.to_string()));
+    }
+}
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum Severity {
