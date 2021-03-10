@@ -66,7 +66,7 @@ mod tests {
             assert_eq!(
                 Vec::<char>::new()
                     .into_iter()
-                    .scan_ref(&mut ct, |st, x| Some(x))
+                    .scan_ref(&mut ct, |_st, x| Some(x))
                     .collect::<Vec<char>>(),
                 Vec::<char>::new()
             );
