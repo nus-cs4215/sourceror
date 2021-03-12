@@ -694,7 +694,6 @@ fn pre_parse_var_decl(
                                         }
                                     }
                                     MultipleOrSingleBTreeMap::MultipleBtreeMap(expressions) => {
-                                        // TODONIG : not appending to prevar for arrays
                                         let ret = expressions
                                             .into_iter()
                                             .map(|expr| {
@@ -728,7 +727,7 @@ fn pre_parse_var_decl(
                                             Err(CompileMessage::new_error(
                                                 decl.loc.into_sl(filename).to_owned(),
                                                 ParseProgramError::SourceRestrictionError(
-                                                    "Unable to parse multiple BTRee Maps",
+                                                    "Arrays must be non empty",
                                                 ),
                                             ))
                                         }
