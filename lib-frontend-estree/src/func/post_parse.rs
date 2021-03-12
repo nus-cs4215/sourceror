@@ -2095,13 +2095,14 @@ fn post_parse_array_expr(
     let mut ret = Vec::with_capacity(es_array_expr.elements.len());
     for (i, el) in es_array_expr.elements.into_iter().enumerate() {
         let cloned_loc = loc.clone();
-        let ret_el = match el {
-            ArrayEntry::Literal(el) => {
+        let ret_el = match el.kind {
+            NodeKind::Literal(el) => {
                 post_parse_literal(el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program)?
             }
-            ArrayEntry::Identifier(el) => {
+            NodeKind::Identifier(el) => {
                 post_parse_varname(el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program)?
             }
+            _ => unreachable!()
         };
         ret.push(ret_el);
     }

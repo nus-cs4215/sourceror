@@ -341,8 +341,7 @@ fn pre_parse_statement(
         NodeKind::VariableDeclaration(var_decl) => {
             pre_parse_var_decl(var_decl, &es_node.loc, name_ctx, depth, filename)
         }
-        NodeKind::ArrayExpression(arr_expr) => {
-            println!("here, {:?}", arr_expr);
+        NodeKind::ArrayExpression(_) => {
             unreachable!()
         }
         NodeKind::EmptyStatement(_) => Ok(BTreeMap::new()), // EmptyStatement does not use any variables
@@ -980,8 +979,12 @@ fn pre_parse_expr(
         }
         NodeKind::ArrayExpression(arr_expr) => {
             let mut ret = Vec::with_capacity(arr_expr.elements.len());
-            for _ in 0..arr_expr.elements.len() {
-                ret.push(BTreeMap::new());
+            for el in arr_expr.elements.iter_mut() {
+                let ret_el = match pre_parse_expr(el, name_ctx, depth, filename)? {
+                    MultipleOrSingleBTreeMap::BTreeMap(map) => map,
+                    MultipleOrSingleBTreeMap::MultipleBtreeMap(_) => unreachable!(),
+                };
+                ret.push(ret_el);
             }
             Ok(MultipleOrSingleBTreeMap::MultipleBtreeMap(ret))
         }

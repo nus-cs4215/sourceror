@@ -200,7 +200,7 @@ pub enum ArrayEntry {
 
 #[derive(Deserialize, Debug)]
 pub struct ArrayExpression {
-    pub elements: Vec<ArrayEntry>, 
+    pub elements: Vec<Node>, 
 }
 
 #[derive(Deserialize, Debug)]
