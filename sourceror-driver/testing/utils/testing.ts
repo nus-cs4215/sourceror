@@ -38,10 +38,6 @@ export function expectResult(code: string, options: TestOptions = {}) {
   ).resolves
 }
 
-export function expectParsedErrorNoSnapshot(code: string, options: TestOptions = {}) {
-  return expect(testFailure(code, options).then(testResult => testResult.parsedErrors)).resolves
-}
-
 export async function testSuccess(code: string, options: TestOptions = { native: false }) {
   const testResult = await compileAndRunTest(code)
   expect(testResult.errors).toEqual([])
