@@ -3,7 +3,6 @@
     "outDir": "./dist",
     "module": "commonjs",
     "declaration": true,
-    "esModuleInterop": true,
     "target": "es2016",
     "lib": ["es2018", "es2017.object", "es2016", "es2015", "dom"],
     "sourceMap": true,

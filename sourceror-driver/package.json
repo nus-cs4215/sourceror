@@ -3,7 +3,6 @@
   "version": "0.7.1",
   "description": "Compiler toolchain from Source to WebAssembly",
   "dependencies": {
-    "acorn": "^7.3.1",
     "js-slang": "^0.4.60",
     "node-getopt": "^0.3.2"
   },
@@ -11,6 +10,7 @@
     "@types/estree": "^0.0.45",
     "@types/jest": "^26.0.20",
     "@types/node": "^14.0.14",
+    "acorn": "^7.4.1",
     "jest": "^26.6.3",
     "prettier": "^2.0.5",
     "ts-jest": "^26.5.3",
@@ -43,5 +43,25 @@
   "bugs": {
     "url": "https://github.com/source-academy/sourceror/issues"
   },
-  "homepage": "https://github.com/source-academy/sourceror#readme"
+  "homepage": "https://github.com/source-academy/sourceror#readme",
+  "jest": {
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "transform": {
+      "\\.ts$": "<rootDir>/node_modules/ts-jest",
+      "\\.js$": "<rootDir>/node_modules/babel-jest"
+    },
+    "testRegex": "/__tests__/.*\\.ts$",
+    "testPathIgnorePatterns": [
+      "/dist/",
+      "'.*benchmark.*'"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/dist/",
+      "/node_modules/",
+      "/testing/utils/testing.ts"
+    ]
+  }
 }

@@ -1,5 +1,5 @@
 import { stripIndent } from '../utils/formatters'
-import { expectParsedError, expectResult } from '../utils/testing'
+import { expectResult } from '../utils/testing'
 
 test('Check that stack is at most 10k in size', () => {
   return expectResult(stripIndent`

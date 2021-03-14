@@ -1,4 +1,4 @@
-import LoadWasm from './load-wasm';
+const LoadWasm = require('./load-wasm');
 
 export type Context = number;
 export type LogCallback = (severity: number, location_file: string, location_start_line: number, location_start_column: number, location_end_line: number, location_end_column: number, message: string) => void;

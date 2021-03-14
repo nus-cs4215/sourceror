@@ -2,10 +2,9 @@ import {
   createContext
 } from 'js-slang';
 import { compile, run, Transcoder, makePlatformImports } from "../src/index";
-import { TestResult } from "../tests/utils/testing";
 
 export function compileAndRunTest(code: string, chapter = 1): Promise<any> { // TestResult?
-  let context= createContext(chapter);
+  let context = createContext(chapter);
   return compile(code, context)
   .then((wasmModule: WebAssembly.Module) => {
     const transcoder = new Transcoder();
@@ -18,10 +17,14 @@ export function compileAndRunTest(code: string, chapter = 1): Promise<any> { // 
   })
 .then(
   (returnedValue: any): any => {
-    return { status: 'finished', value: returnedValue, errors: []};
+    return { resultStatus: 'finished', result: returnedValue, errors: []};
   },
   (e: any): any => {
-    return { status: 'error', errors: e};
+    return { resultStatus: 'error', errors: e};
   }
-);
+).catch((err) => {
+  console.log('error: ', err);
+})
 }
+
+compileAndRunTest("1;").then(res => console.log(res));

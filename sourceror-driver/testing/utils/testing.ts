@@ -1,4 +1,4 @@
-import { Context, CustomBuiltIns, Variant, SourceError, Value } from '../types'
+import { Context, Variant, SourceError, Value } from '../types'
 import { compileAndRunTest }  from '../compileAndRun'
 
 export interface TestContext extends Context {
