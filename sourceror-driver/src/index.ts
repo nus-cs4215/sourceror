@@ -8,7 +8,7 @@ export { makePlatformImports } from "./platform";
 import { Transcoder } from "./transcoder";
 export { Transcoder };
 import { cachedGetFile } from "./cache";
-import { Constants } from "../constants/constants";
+import { Constants } from "./constants/constants";
 
 export class CompileError extends Error {
   constructor(message: string) {

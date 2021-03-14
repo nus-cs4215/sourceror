@@ -1,6 +1,6 @@
 import { stripIndent } from '../utils/formatters'
 import { expectResult } from '../utils/testing'
-import { Constants } from '../../constants/constants'
+import { Constants } from '../../src/constants/constants'
 
 // This is bad practice. Don't do this!
 test('standalone block statements', () => {
