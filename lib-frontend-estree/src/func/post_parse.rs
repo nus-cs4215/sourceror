@@ -1131,6 +1131,9 @@ fn post_parse_expr_statement(
     // We don't need to detect AssignmentExpression separately here...
     // We just treat it as an expression that returns undefined.
     // pre_parse() would have already ensured that there are no nested AssignmentExpressions.
+    println!("===========================");
+    println!("es_expr_stmt.expression");
+    println!("{:#?}", es_expr_stmt.expression);
 
     post_parse_expr(
         *es_expr_stmt.expression,
@@ -1140,6 +1143,35 @@ fn post_parse_expr_statement(
         filename,
         ir_program,
     )
+
+    // EDIT: we will need to detect AssignmentExpression separately
+    // ExpressionStatments are currently parsed into an assignment expr that returns undefined
+    // let es_expr_node: &mut Node = &mut *es_expr_stmt.expression;
+    // if let NodeKind::AssignmentExpression(AssignmentExpression {
+    //     operator,
+    //     left,
+    //     right,
+    // }) = &mut es_expr_node.kind
+    // {
+    //     // WIP
+    //     post_parse_expr(
+    //         *es_expr_stmt.expression,
+    //         parse_ctx,
+    //         depth,
+    //         num_locals,
+    //         filename,
+    //         ir_program,
+    //     )
+    // } else {
+    //     post_parse_expr(
+    //         *es_expr_stmt.expression,
+    //         parse_ctx,
+    //         depth,
+    //         num_locals,
+    //         filename,
+    //         ir_program,
+    //     )
+    // }
 }
 
 fn post_parse_return_statement(

@@ -19,7 +19,7 @@ use std::collections::HashSet;
  * Pre-parse an ESTree program
  * Decide where every ir local should be declared,
  * and whether they need to be address-taken (i.e. put in the heap).
- * Also detect duplicate variable detection in the same scope; if so, raises an error.
+ * Also detect duplicate variable declaration in the same scope; if so, raises an error.
  *
  * Note: import_ctx contains x elements, where x is the number of imports detected in the dep_graph step, in order;
  * and each element is a hash map from name to the imported prevar (which must be a global, i.e. prevar.depth == 0).
@@ -66,7 +66,6 @@ pub fn pre_parse_program(
     es_program.direct_funcs = direct_funcs;
 
     name_ctx.remove_scope(undo_ctx);
-
     Ok(exports)
 }
 
@@ -74,7 +73,7 @@ pub fn pre_parse_program(
  * Pre-parse an ESTree node block content
  * Decide where every ir local should be declared,
  * and whether they need to be address-taken (i.e. put in the heap).
- * Also detect duplicate variable detection in the same scope; if so, raises an error.
+ * Also detect duplicate variable declaration in the same scope; if so, raises an error.
  *
  * name_ctx may be modified, but must be returned to its original state before the function returns (this allows the frontend to have good time complexity guarantees).
  */
@@ -217,6 +216,50 @@ fn pre_parse_function<F: Function + Scope>(
     *es_func.captured_vars_mut() = clone_varusages(&ret_usages);
 
     Ok(varusage::wrap_closure(ret_usages))
+}
+
+fn pre_parse_assign_expr(
+    es_assign_expr: &mut AssignmentExpression,
+    _loc: &Option<esSL>,
+    name_ctx: &mut HashMap<String, PreVar>,
+    depth: usize,
+    filename: Option<&str>,
+) -> Result<BTreeMap<VarLocId, Usage>, CompileMessage<ParseProgramError>> {
+    // check that it is '='.
+    if es_assign_expr.operator != "=" {
+        return Err(CompileMessage::new_error(
+            _loc.into_sl(filename).to_owned(),
+            ParseProgramError::SourceRestrictionAssignmentOperatorError(
+                es_assign_expr.operator.to_string(),
+            ),
+        ));
+    }
+    if let Node {
+        loc: _,
+        kind: NodeKind::Identifier(Identifier { name, prevar }),
+    } = &mut *es_assign_expr.left
+    {
+        let rhs_expr = pre_parse_expr(&mut *es_assign_expr.right, name_ctx, depth, filename)?;
+        let resvar = *name_ctx.get(name.as_str()).unwrap();
+        *prevar = Some(resvar);
+        let varlocid = match resvar {
+            PreVar::Target(varlocid) => varlocid,
+            PreVar::Direct => panic!("ICE: Should be VarLocId"),
+        };
+        if varlocid.depth == 0 {
+            Ok(rhs_expr)
+        } else {
+            Ok(varusage::merge_series(
+                rhs_expr,
+                varusage::from_modified(varlocid),
+            ))
+        }
+    } else {
+        Err(CompileMessage::new_error(
+            _loc.into_sl(filename).to_owned(),
+            ParseProgramError::ESTreeError("Expected ESTree Identifier here"),
+        ))
+    }
 }
 
 fn split_off_address_taken_vars(
@@ -399,6 +442,9 @@ fn pre_parse_expr_statement(
                 } => {
                     let rhs_expr = pre_parse_expr(&mut **right, name_ctx, depth, filename)?;
                     let resvar = *name_ctx.get(name.as_str()).unwrap();
+                    println!("===========================");
+                    println!("prevar");
+                    println!("{:?}", prevar);
                     assert!(*prevar == Some(resvar)); // they should already have a prevar attached
                                                       // note: this is probably a bug, they would not have prevar attached yet...
                     let varlocid = match resvar {
@@ -817,12 +863,9 @@ fn pre_parse_expr(
             let rhs = pre_parse_expr(&mut *binary_expr.right, name_ctx, depth, filename)?;
             Ok(varusage::merge_series(lhs, rhs))
         }
-        NodeKind::AssignmentExpression(_) => Err(CompileMessage::new_error(
-            es_expr.loc.into_sl(filename).to_owned(),
-            ParseProgramError::SourceRestrictionError(
-                "Assignment cannot be nested in an expression",
-            ),
-        )),
+        NodeKind::AssignmentExpression(assign_expr) => {
+            pre_parse_assign_expr(&mut *assign_expr, &es_expr.loc, name_ctx, depth, filename)
+        }
         NodeKind::LogicalExpression(logical_expr) => {
             // logical operators will short circuit, but it doesn't affect the result
             // since a + (b | empty) === a + b
