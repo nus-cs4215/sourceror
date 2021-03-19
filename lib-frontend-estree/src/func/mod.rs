@@ -130,7 +130,6 @@ pub fn parse_program(
             start_idx,
             filename.as_deref(),
         )?;
-
         let parse_state: ParseState = post_parse::post_parse_program(
             es_program,
             loc,

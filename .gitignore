@@ -9,3 +9,4 @@ Cargo.lock
 log*
 *.ir
 *.wasm
+.vscode
