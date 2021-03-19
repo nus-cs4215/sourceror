@@ -443,8 +443,10 @@ fn pre_parse_expr_statement(
                     let rhs_expr = pre_parse_expr(&mut **right, name_ctx, depth, filename)?;
                     let resvar = *name_ctx.get(name.as_str()).unwrap();
                     *prevar = Some(resvar);
-                    // assert!(*prevar == Some(resvar)); // they should already have a prevar attached
-                    //                                   // note: this is probably a bug, they would not have prevar attached yet...
+                    // println!("{:#?}", *prevar);
+                    // println!("{:#?}", resvar);
+                    assert!(*prevar == Some(resvar)); // they should already have a prevar attached
+                                                      // note: this is probably a bug, they would not have prevar attached yet...
                     let varlocid = match resvar {
                         PreVar::Target(varlocid) => varlocid,
                         PreVar::Direct => panic!("ICE: Should be VarLocId"),
@@ -1037,19 +1039,6 @@ fn validate_and_extract_imports_and_decls(
         ),
         Node {
             loc,
-            kind: NodeKind::ExpressionStatement(expr_stmt),
-        } => process_expr_stmt_validation(
-            &mut var_ctx,
-            &mut ret,
-            expr_stmt,
-            loc,
-            attr,
-            0,
-            start_idx,
-            filename,
-        ),
-        Node {
-            loc,
             kind: NodeKind::ImportDeclaration(import_decl),
         } => process_import_decl_validation(
             &mut var_ctx,
@@ -1143,37 +1132,6 @@ fn process_var_decl_validation(
         }
         Ok(())
     }
-}
-
-fn process_expr_stmt_validation(
-    var_ctx: &mut ProgramPreExports,
-    out: &mut Vec<(String, PreVar)>,
-    expr_stmt: &ExpressionStatement,
-    _loc: &Option<esSL>,
-    _attr: HashMap<String, Option<String>>,
-    depth: usize,
-    start_idx: &mut usize,
-    filename: Option<&str>,
-) -> Result<(), CompileMessage<ParseProgramError>> {
-    if let Node {
-        loc: _,
-        kind: NodeKind::AssignmentExpression(assign_expr),
-    } = &*expr_stmt.expression
-    {
-        if let Node {
-            loc,
-            kind: NodeKind::Identifier(es_id),
-        } = &*assign_expr.left
-        {
-            let ret = VarLocId {
-                depth: depth,
-                index: *start_idx,
-            };
-            *start_idx += 1;
-            out.push((es_id.name.as_str().to_owned(), PreVar::Target(ret)));
-        }
-    }
-    Ok(())
 }
 
 fn try_coalesce_id_target<'a>(
