@@ -356,8 +356,14 @@ fn post_parse_scope<S: Scope, PE: ScopePrefixEmitter>(
         }
     }
     // the extra undefined below ensures that the sequence returns undefined
-    // todo! IR should remove this Expr if the last stmt already returns undefined, so that we can ensure tail call in certain situations.
-    sequence.push(make_prim_undefined());
+    // only push undefined if last stmt does not return undefined
+    let ir::Expr {
+        vartype: v,
+        kind: _,
+    } = sequence.last().cloned().unwrap();
+    if v != Some(ir::VarType::Undefined) {
+        sequence.push(make_prim_undefined());
+    }
 
     let sequence_expr = ir::Expr {
         vartype: Some(ir::VarType::Undefined),
