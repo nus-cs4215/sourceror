@@ -139,7 +139,7 @@ pub fn encode_funcs<'a, Heap: HeapManager>(
                     encode_param_list(&ir_func.params);
                 let wasm_functype = wasmgen::FuncType::new(
                     wasm_param_valtypes,
-                    encode_result(ir_func.result, options.wasm_multi_value),
+                    encode_result(ir_func.result, options.wasm_multi_value), // TODO check WTC && TC
                 );
                 let (_, wasm_funcidx) = wasm_module.register_func(&wasm_functype);
                 let code_builder = wasmgen::CodeBuilder::new(wasm_functype);
@@ -176,7 +176,7 @@ pub fn encode_funcs<'a, Heap: HeapManager>(
                     wasmgen::ValType::I32,
                     wasmgen::ValType::I32,
                 ]),
-                encode_result(Some(ir::VarType::Any), options.wasm_multi_value),
+                encode_result(Some(ir::VarType::Any), options.wasm_multi_value), // TODO check WTC && TC
             );
             let (_, wasm_funcidx) = wasm_module.register_func(&wasm_functype);
             let mut code_builder = wasmgen::CodeBuilder::new(wasm_functype);
@@ -763,6 +763,7 @@ fn encode_expr<H: HeapManager>(
             func,
             args,
             location,
+            tail_call,
         } => {
             // encodes an indirect function call
             encode_appl(
@@ -773,10 +774,15 @@ fn encode_expr<H: HeapManager>(
                 ctx,
                 mutctx,
                 expr_builder,
+                *tail_call,
             );
             true
         }
-        ir::ExprKind::DirectAppl { funcidx, args } => {
+        ir::ExprKind::DirectAppl {
+            funcidx,
+            args,
+            tail_call: _,
+        } => {
             // encodes a function call
             encode_direct_appl(expr.vartype, *funcidx, args, ctx, mutctx, expr_builder);
             true
@@ -910,6 +916,7 @@ fn encode_expr<H: HeapManager>(
                                 mutctx.scratch_mut(),
                                 expr_builder,
                             );
+                            // TODO i32 
                             // return the value on the stack (or in the unprotected stack) (which now has the correct type)
                             expr_builder.return_();
                         }
@@ -1245,6 +1252,7 @@ fn encode_appl<H: HeapManager>(
     ctx: EncodeContext<H>,
     mutctx: &mut MutContext,
     expr_builder: &mut wasmgen::ExprBuilder,
+    tail_call: bool,
 ) {
     // An Appl (indirect call) should be encoded using the uniform calling convention, placing actual arguments onto the unprotected stack.
 
@@ -1284,6 +1292,14 @@ fn encode_appl<H: HeapManager>(
             expr_builder,
         );
 
+        // TODO: check wasm tail call flags
+        // 4 cases:
+        // 1. WTC, TC -> We can simply use the proposal : ok
+        // 2. WTC, !TC -> Same : ok
+        // 3. !WTC, TC -> TC: Store on the unprotected stack. TAG with i32.
+        // 4. !WTC, !TC -> we will need to make indirect calls until the base case then we can return the value
+        // https://rd.nz/2009/04/tail-calls-tailrec-and-trampolines.html
+
         // encode the proper caller id (which is the memory location of the SourceLocation)
         // net wasm stack: [] -> [i32(callerid)]
         expr_builder.i32_const(*ctx.appl_data_encoder.get(location).unwrap() as i32);
@@ -1294,10 +1310,30 @@ fn encode_appl<H: HeapManager>(
 
         // todo!(For optimisation, heap_encode_prologue_epilogue should only be called if the callee might allocate)
         // Note: encode_args_to_call_function should be *before* encode_local_roots_prologue, since the args themselves might make function calls.
-        if true {
+        // TODO: check wasm_tail_call and tail_call flags
+        // if both: can do return_call_indirect according to WTCP
+        if tail_call {
             // This function might allocate memory, so we need to store the locals in the gc_roots stack first.
 
             // call the function with gc prologue and epilogue
+            return expr_builder.return_call_indirect(
+                mutctx
+                    .module_wrapper()
+                    .add_wasm_type(wasmgen::FuncType::new(
+                        Box::new([
+                            wasmgen::ValType::I32,
+                            wasmgen::ValType::I32,
+                            wasmgen::ValType::I32,
+                        ]),
+                        encode_result(Some(ir::VarType::Any), ctx.options.wasm_multi_value),
+                    )),
+                wasmgen::TableIdx { idx: 0 },
+            );
+        } else {
+            // This function is guaranteed not to allocate memory, so we don't need to put the locals on the gc_roots stack.
+
+            // add: expr_builder.i32_const(0);
+            // call the function (indirectly)
             mutctx.heap_encode_prologue_epilogue(ctx.heap, expr_builder, |mutctx, expr_builder| {
                 // call the function (indirectly, using uniform calling convention)
                 expr_builder.call_indirect(
@@ -1314,23 +1350,6 @@ fn encode_appl<H: HeapManager>(
                     wasmgen::TableIdx { idx: 0 },
                 );
             });
-        } else {
-            // This function is guaranteed not to allocate memory, so we don't need to put the locals on the gc_roots stack.
-
-            // call the function (indirectly)
-            expr_builder.call_indirect(
-                mutctx
-                    .module_wrapper()
-                    .add_wasm_type(wasmgen::FuncType::new(
-                        Box::new([
-                            wasmgen::ValType::I32,
-                            wasmgen::ValType::I32,
-                            wasmgen::ValType::I32,
-                        ]),
-                        encode_result(Some(ir::VarType::Any), ctx.options.wasm_multi_value),
-                    )),
-                wasmgen::TableIdx { idx: 0 },
-            );
         }
 
         // fetch return values from the location prescribed by the calling convention back to the stack
@@ -1449,7 +1468,7 @@ fn encode_args_to_call_indirect_function<H: HeapManager>(
         // load the adjusted stackptr
         // net wasm stack: [] -> [i32(stackptr)]
         expr_builder.global_get(ctx.stackptr);
-        expr_builder.i32_const((args.len() as u32 * size_in_memory(ir::VarType::Any)) as i32);
+        expr_builder.i32_const((args.len() as u32 * size_in_memory(ir::VarType::Any)) as i32); // TODO
         expr_builder.i32_sub();
 
         // net wasm stack: [stackptr] -> []
@@ -1688,7 +1707,7 @@ fn encode_thunk<H: HeapManager>(
             if num_params > 0 {
                 // net wasm stack: [] -> [i32(localidx_stackptr)]
                 expr_builder.global_get(ctx.stackptr);
-                expr_builder.i32_const((size_in_memory(ir::VarType::Any) * num_params) as i32);
+                expr_builder.i32_const((size_in_memory(ir::VarType::Any) * num_params) as i32); // TODO
                 expr_builder.i32_sub();
 
                 if num_params > 1 {

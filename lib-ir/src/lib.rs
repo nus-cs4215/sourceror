@@ -98,6 +98,7 @@ pub struct Func {
     pub params: Box<[VarType]>, // list of function parameters (including closure)
     pub result: Option<VarType>, // if `None`, it means that this function never returns (e.g. it guarantees to trap or infinite loop, see the generated runtime error function)
     pub expr: Expr, // body of the function, must either return Void or return the correct result type
+    pub tail_call: bool, // whether the fn is tail-callable or not
     pub signature_filter: Vec<(Box<[VarType]>, VarType, FuncIdx)>, // list of possibly acceptable signatures (param_types, return_type, constrained_func).
                                                                    // If a signature is not in this list, then it will be guaranteed to error;
                                                                    // but converse need not be true.  All entries must be a subtype of `params`.
@@ -192,10 +193,12 @@ pub enum ExprKind {
         func: Box<Expr>,
         args: Box<[Expr]>,
         location: SourceLocation, // will be displayed in the error message if the signature mismatches
+        tail_call: bool,
     }, // function application (operators are functions too).  Closure parameter is implicitly prepended to the argument list.  Called using Source indirect calling convention (closure, length, and callerid as i32 params; others are Any and on unprotected stack). Static type of func must be func.
     DirectAppl {
         funcidx: FuncIdx,
         args: Box<[Expr]>,
+        tail_call: bool,
     }, // direct function application (operators are functions too).  No closure will be prepended.
     Conditional {
         cond: Box<Expr>,
@@ -369,6 +372,7 @@ impl Func {
                 kind: ExprKind::PrimUndefined,
             },
             signature_filter: Default::default(),
+            tail_call: false,
         }
     }
     pub fn new_with_params_and_result(params: &[VarType], result: VarType) -> Func {
@@ -380,6 +384,7 @@ impl Func {
                 kind: ExprKind::PrimUndefined,
             },
             signature_filter: Default::default(),
+            tail_call: false,
         }
     }
     pub fn signature(&self) -> (&[VarType], Option<VarType>) {

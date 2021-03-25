@@ -86,9 +86,9 @@ const MEM_STACK_SIZE: u32 = 1 << 4; // 1 MiB of stack space
 // Struct containing compilation options
 #[derive(Default, Copy, Clone)]
 pub struct Options {
-    wasm_multi_value: bool, // Whether we can generate code that uses the WebAssembly multi-valued returns proposal
-    wasm_bulk_memory: bool, // Whether we can generate code that uses the WebAssembly bulk memory proposal
-    wasm_tail_call: bool, // Whether we can generate code that uses the WebAssembly tail call proposal
+    pub wasm_multi_value: bool, // Whether we can generate code that uses the WebAssembly multi-valued returns proposal
+    pub wasm_bulk_memory: bool, // Whether we can generate code that uses the WebAssembly bulk memory proposal
+    pub wasm_tail_call: bool, // Whether we can generate code that uses the WebAssembly tail call proposal
 }
 
 /**
