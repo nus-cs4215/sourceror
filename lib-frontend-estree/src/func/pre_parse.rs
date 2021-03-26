@@ -958,6 +958,8 @@ fn validate_and_extract_decls(
 ) -> Result<Vec<(String, PreVar)>, CompileMessage<ParseProgramError>> {
     let mut var_ctx: ProgramPreExports = VarCtx::new();
     let mut ret: Vec<(String, PreVar)> = Vec::new();
+    let mut const_vars: HashSet<String> = HashSet::new();
+
     es_block_body.each_with_attributes(filename, |es_node, attr| match es_node {
         Node {
             loc,
@@ -984,6 +986,7 @@ fn validate_and_extract_decls(
             depth,
             start_idx,
             filename,
+            &mut const_vars,
         ),
         _ => Ok(()),
     })?;
@@ -1010,6 +1013,8 @@ fn validate_and_extract_imports_and_decls(
     let mut ret: Vec<(String, PreVar)> = Vec::new();
     let mut exports: ProgramPreExports = ProgramPreExports::new();
     let mut import_decl_idx = 0;
+    let mut const_vars: HashSet<String> = HashSet::new();
+
     es_program_body.each_with_attributes(filename, |es_node, attr| match es_node {
         Node {
             loc,
@@ -1036,6 +1041,21 @@ fn validate_and_extract_imports_and_decls(
             0,
             start_idx,
             filename,
+            &mut const_vars,
+        ),
+        Node {
+            loc,
+            kind: NodeKind::ExpressionStatement(expr_stmt),
+        } => process_expr_stmt_validation(
+            &mut var_ctx,
+            &mut ret,
+            expr_stmt,
+            loc,
+            attr,
+            0,
+            start_idx,
+            filename,
+            &mut const_vars,
         ),
         Node {
             loc,
@@ -1103,6 +1123,7 @@ fn process_var_decl_validation(
     depth: usize,
     start_idx: &mut usize,
     filename: Option<&str>,
+    const_vars: &mut HashSet<String>,
 ) -> Result<(), CompileMessage<ParseProgramError>> {
     if attr.contains_key("direct") {
         Err(CompileMessage::new_error(
@@ -1121,6 +1142,9 @@ fn process_var_decl_validation(
                 let (name, varlocid) =
                     try_coalesce_id_target(var_ctx, &*var_decr.id, depth, start_idx, filename)?;
                 out.push((name.to_owned(), PreVar::Target(varlocid)));
+                if var_decl.kind == "const" {
+                    const_vars.insert(name.to_owned());
+                }
             } else {
                 return Err(CompileMessage::new_error(
                     loc.into_sl(filename).to_owned(),
@@ -1132,6 +1156,39 @@ fn process_var_decl_validation(
         }
         Ok(())
     }
+}
+
+fn process_expr_stmt_validation(
+    var_ctx: &mut ProgramPreExports,
+    out: &mut Vec<(String, PreVar)>,
+    expr_stmt: &ExpressionStatement,
+    _loc: &Option<esSL>,
+    _attr: HashMap<String, Option<String>>,
+    depth: usize,
+    start_idx: &mut usize,
+    filename: Option<&str>,
+    const_vars: &mut HashSet<String>,
+) -> Result<(), CompileMessage<ParseProgramError>> {
+    if let Node {
+        loc: _,
+        kind: NodeKind::AssignmentExpression(assign_expr),
+    } = &*expr_stmt.expression
+    {
+        if let Node {
+            loc,
+            kind: NodeKind::Identifier(es_id),
+        } = &*assign_expr.left
+        {
+            try_coalesce_id_target(var_ctx, &*assign_expr.left, depth, start_idx, filename);
+            if const_vars.contains(es_id.name.as_str()) {
+                return Err(CompileMessage::new_error(
+                    loc.into_sl(filename).to_owned(),
+                    ParseProgramError::AssignmentToConstantError(es_id.name.as_str().to_owned()),
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn try_coalesce_id_target<'a>(
