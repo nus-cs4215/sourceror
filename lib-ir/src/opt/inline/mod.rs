@@ -329,7 +329,7 @@ fn as_direct_appl_args(expr: &mut Expr) -> &mut Box<[Expr]> {
     if let ExprKind::DirectAppl {
         funcidx: _,
         args,
-        tail_call,
+        tail_call: _,
     } = &mut expr.kind
     {
         args

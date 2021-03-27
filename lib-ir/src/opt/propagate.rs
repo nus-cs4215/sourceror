@@ -225,7 +225,7 @@ fn optimize_expr(
             func,
             args,
             location: _,
-            tail_call,
+            tail_call: _,
         } => {
             let mut ret = optimize_expr(func, local_map, ctx, landing_ctx);
             if func.vartype.is_none() {
@@ -250,7 +250,7 @@ fn optimize_expr(
         ExprKind::DirectAppl {
             funcidx,
             args,
-            tail_call,
+            tail_call: _,
         } => {
             let mut ret = false;
             for (i, arg) in args.iter_mut().enumerate() {
@@ -760,7 +760,7 @@ fn try_devirtualize_appl(
         func,
         args,
         location,
-        tail_call,
+        tail_call: _,
     } = &mut expr.kind
     {
         if let ExprKind::PrimFunc { funcidxs, closure } = &mut func.kind {

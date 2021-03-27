@@ -54,7 +54,7 @@ fn optimize_expr(expr: &mut Expr) -> bool {
             func,
             args,
             location: _,
-            tail_call,
+            tail_call: _,
         } => {
             optimize_expr(func)
                 | args
@@ -64,7 +64,7 @@ fn optimize_expr(expr: &mut Expr) -> bool {
         ExprKind::DirectAppl {
             funcidx: _,
             args,
-            tail_call,
+            tail_call: _,
         } => args
             .iter_mut()
             .fold(false, |prev, arg| prev | optimize_expr(arg)),
