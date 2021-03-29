@@ -1,5 +1,4 @@
 use crate::var_conv::encode_vartype;
-use std::ops::Deref;
 
 // Manages mapping between ir global variables and wasm global variables.
 // Does not include non-ir globals (e.g. stackptr)

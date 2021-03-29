@@ -113,6 +113,7 @@ pub struct FuncSection {
 }
 
 #[derive(Default)]
+#[allow(dead_code)]
 pub struct TableSection {
     content: Vec<Table>,
     idx_offset: u32, // the number of imports
@@ -207,7 +208,7 @@ pub struct TypeIdx {
     pub idx: u32,
 }
 
-#[derive(Eq, PartialEq, Copy, Clone, Hash)]
+#[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
 pub struct FuncIdx {
     pub idx: u32,
 }
@@ -227,7 +228,7 @@ pub struct GlobalIdx {
     pub idx: u32,
 }
 
-#[derive(Eq, PartialEq, Copy, Clone, Hash)]
+#[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
 pub struct LocalIdx {
     pub idx: u32,
 }

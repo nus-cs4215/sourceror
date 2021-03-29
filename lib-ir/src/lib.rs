@@ -1,6 +1,6 @@
+use std::default::Default;
 use std::option::Option;
 use std::vec::Vec;
-use std::{default::Default};
 /**
  * The structs here represent the intermediate representation of the program.
  * In particular:
@@ -52,7 +52,7 @@ pub enum VarType {
     Boolean,
     String,                     // reference type
     Func,                       // holds a function ptr and a closure
-    StructT { typeidx: usize }, // reference type; typeid starts from zero and should be in range [0, object_types.len()).
+    StructT { typeidx: usize }, // reference type; typeid starts from zero and should be in range [0, object_types.len()].
     Array,
 }
 
@@ -162,7 +162,6 @@ pub enum ExprKind {
         typeidx: usize,
     }, // a struct (Any will be set to Unassigned variant; String, Func::closure, StructT will be set to something that the GC can recognise as a "null pointer" for that VarType)
     PrimArray {
-        // TODONIG
         elements: Vec<Expr>,
     },
     PrimFunc {

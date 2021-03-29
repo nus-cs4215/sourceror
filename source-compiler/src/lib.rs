@@ -36,10 +36,12 @@ extern "C" {
 }
 
 async fn fetch_dep_proxy(context: i32, name: String) -> Option<String> {
-    JsFuture::from(fetch_dep(context, name))
-        .await
-        .ok()
-        .and_then(|x| x.as_string())
+    unsafe {
+        JsFuture::from(fetch_dep(context, name))
+            .await
+            .ok()
+            .and_then(|x| x.as_string())
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -56,16 +58,18 @@ impl MainLogger {
 impl projstd::log::Logger for MainLogger {
     fn log<L: projstd::log::Loggable>(&self, content: L) {
         let loc = content.location();
-        compiler_log(
-            self.context,
-            content.severity().code(),
-            loc.source.unwrap_or(""),
-            loc.start.line,
-            loc.start.column,
-            loc.end.line,
-            loc.end.column,
-            content.message(),
-        );
+        unsafe {
+            compiler_log(
+                self.context,
+                content.severity().code(),
+                loc.source.unwrap_or(""),
+                loc.start.line,
+                loc.start.column,
+                loc.end.line,
+                loc.end.column,
+                content.message(),
+            );
+        }
     }
 }
 

@@ -68,10 +68,13 @@ pub fn make_do_cheney<'a>(
                         );
                         expr_builder.global_set(wasm_globalidxs[1]); // store the `data` of the Any
                     }
-                    ir::VarType::Unassigned => {}
-                    ir::VarType::Undefined => {}
-                    ir::VarType::Number => {}
-                    ir::VarType::Boolean => {}
+                    ir::VarType::Unassigned
+                    | ir::VarType::Undefined
+                    | ir::VarType::Number
+                    | ir::VarType::Boolean => {}
+                    ir::VarType::Array => {
+                        // TODO: what needs to be done here?
+                    }
                     ir::VarType::String => {
                         // net wasm stack: [] -> []
                         gen(
@@ -171,7 +174,7 @@ pub fn make_do_cheney<'a>(
                 expr_builder: &mut wasmgen::ExprBuilder,
                 scratch: &mut Scratch,
                 wasm_globalidx: wasmgen::GlobalIdx,
-                tableidx: wasmgen::TableIdx,
+                _tableidx: wasmgen::TableIdx,
                 copy_func: wasmgen::FuncIdx,
                 heap_begin: u32,
                 is_string: bool,

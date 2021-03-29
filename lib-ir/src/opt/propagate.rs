@@ -109,9 +109,9 @@ fn optimize_expr(
             assert!(expr.vartype == Some(VarType::String));
             false
         }
-        ExprKind::PrimArray {elements: _} => {
-           assert!(expr.vartype == Some(VarType::Array));
-           false
+        ExprKind::PrimArray { elements: _ } => {
+            assert!(expr.vartype == Some(VarType::Array));
+            false
         }
         ExprKind::PrimFunc {
             funcidxs: _,

@@ -1,6 +1,5 @@
 use crate::mutcontext::MutContext;
 use wasmgen::ExprBuilder;
-use wasmgen::Scratch;
 use wasmgen::ValType;
 
 // Encodes an if-stmt (with 'else' part), abstracting over the issues relating to lack of multi-value support by spawning new locals if necessary
@@ -175,7 +174,7 @@ pub fn break_(
     landing_ctx: &[wasmgen::LocalIdx],
     valtypes: &[ValType],
     use_multi_value: bool,
-    mutctx: &mut MutContext,
+    _mutctx: &mut MutContext,
     expr_builder: &mut ExprBuilder,
 ) {
     if use_multi_value || valtypes.len() <= 1 {
