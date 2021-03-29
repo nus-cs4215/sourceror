@@ -4,7 +4,6 @@ use crate::var_conv::*;
 use wasmgen::ExprBuilder;
 use wasmgen::Scratch;
 
-use std::slice::SliceIndex;
 use std::vec::Vec;
 
 /**
@@ -35,6 +34,7 @@ pub struct MutContext<'a, 'b> {
     // Global for whole program
     module_wrapper: ModuleEncodeWrapper<'b>,
     // will also include function indices
+    temp_array_length: usize,
 }
 impl<'a, 'b> MutContext<'a, 'b> {
     pub fn new(
@@ -54,6 +54,7 @@ impl<'a, 'b> MutContext<'a, 'b> {
             ir_landings: Vec::new(),
             wasm_landing_count: 0,
             module_wrapper: module_wrapper,
+            temp_array_length: 0,
         }
     }
     /**
@@ -149,6 +150,7 @@ impl<'a, 'b> MutContext<'a, 'b> {
      * Like `with_local()` but with many locals.
      * f(mutctx, expr_builder, idx), where `idx` is the starting index into `local_map` and `local_types` of the new locals.
      */
+    #[allow(dead_code)]
     pub fn with_shadow_locals<
         H: HeapManager,
         R,
@@ -292,6 +294,7 @@ impl<'a, 'b> MutContext<'a, 'b> {
         self.scratch.pop_i64();
         result
     }
+    #[allow(dead_code)]
     pub fn with_scratch_f32<R, F: FnOnce(&mut Self, wasmgen::LocalIdx) -> R>(&mut self, f: F) -> R {
         let idx = self.scratch.push_f32();
         let result = f(self, idx);
@@ -304,9 +307,10 @@ impl<'a, 'b> MutContext<'a, 'b> {
         self.scratch.pop_f64();
         result
     }
+    #[allow(dead_code)]
     pub fn with_scratch<R, F: FnOnce(&mut Self, wasmgen::LocalIdx) -> R>(
         &mut self,
-        valtype: wasmgen::ValType,
+        _valtype: wasmgen::ValType,
         f: F,
     ) -> R {
         let idx = self.scratch_mut().push_f64();
@@ -404,6 +408,7 @@ impl<'a, 'b> MutContext<'a, 'b> {
         vartype: ir::VarType,
         expr_builder: &mut ExprBuilder,
     ) {
+        let temp_length = self.temp_array_length(); // Need to copy this out because of rust's borrow checker
         heap.encode_dynamic_allocation(
             vartype,
             &self.local_types,
@@ -411,6 +416,7 @@ impl<'a, 'b> MutContext<'a, 'b> {
             &self.wasm_local_map,
             &mut self.scratch,
             expr_builder,
+            temp_length,
         );
     }
     pub fn heap_encode_prologue_epilogue<
@@ -445,5 +451,25 @@ impl<'a, 'b> MutContext<'a, 'b> {
         );
 
         result
+    }
+
+    pub fn set_temp_array_length(&mut self, new_array_length: usize) {
+        assert!(
+            self.temp_array_length == 0,
+            "ICE: Data race setting array length"
+        );
+        self.temp_array_length = new_array_length;
+    }
+
+    pub fn temp_array_length(&self) -> usize {
+        self.temp_array_length
+    }
+    
+    pub fn reset_temp_array_length(&mut self) {
+        assert!(
+            self.temp_array_length != 0,
+            "ICE: Data race setting array length"
+        );
+        self.temp_array_length = 0;
     }
 }

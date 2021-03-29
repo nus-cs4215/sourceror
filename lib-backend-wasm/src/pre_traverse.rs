@@ -68,6 +68,15 @@ fn pre_traverse_expr_kind(expr_kind: &ir::ExprKind, res: &mut TraverseResult) {
             res.thunk_sv.insert_copy(funcidxs);
             pre_traverse_expr(closure, res);
         }
+        ir::ExprKind::PrimArray { elements } => elements
+            .iter()
+            .map(|el| {
+                // Add strings in arrays to string_pool
+                if let ir::ExprKind::PrimString { val } = &el.kind {
+                    res.string_pool.insert(val);
+                }
+            })
+            .collect(), 
         ir::ExprKind::TypeCast {
             test,
             expected: _,

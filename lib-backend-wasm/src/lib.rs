@@ -22,6 +22,7 @@
  * String -> i32 (ptr to unsized mem)
  * Func -> i32 (index in wasm table) + i32 (closure)
  * StructT -> i32 (ptr to data)
+ * Array -> i32 (ptr to data)
  * Any -> i32 (tag) + i64 (data, reinterpret as the concrete type specified in the tag)
  *
  * Note on String (and in the future Array should be similar):
@@ -67,7 +68,6 @@ mod string_prim_inst;
 mod var_conv;
 
 use gc::cheney::Cheney;
-use gc::leaky::Leaky;
 use gc::HeapManager;
 
 use projstd::iter::*;
@@ -75,6 +75,7 @@ use projstd::tuple::*;
 
 use wasmgen::Scratch;
 
+#[allow(dead_code)]
 const IR_FUNCIDX_TABLE_OFFSET: u32 = 0; // If ir::FuncIdx == x, then wasmgen::TableIdx == IR_FUNCIDX_TABLE_OFFSET + x as u32
 
 const WASM_PAGE_SIZE: u32 = 65536;
@@ -214,10 +215,6 @@ fn encode_program(ir_program: &ir::Program, options: Options) -> wasmgen::WasmMo
         MEM_STACK_SIZE + globals_num_pages + Cheney::initial_heap_size(),
         &mut wasm_module,
     );
-    /*let memidx: wasmgen::MemIdx = encode_mem(
-        MEM_STACK_SIZE + globals_num_pages + Cheney::initial_heap_size(),
-        &mut wasm_module,
-    );*/
 
     // export the memory (so that the host can read the return value)
     wasm_module.export_mem(memidx, "linear_memory".to_string());
@@ -250,16 +247,6 @@ fn encode_program(ir_program: &ir::Program, options: Options) -> wasmgen::WasmMo
         error_func,
         &mut wasm_module,
     );
-    /*let heap = Cheney::new(
-        &ir_program.struct_types,
-        &struct_field_byte_offsets,
-        &struct_sizes,
-        memidx,
-        MEM_STACK_SIZE + globals_num_pages,
-        MEM_STACK_SIZE + globals_num_pages + Cheney::initial_heap_size(),
-        error_func,
-        &mut wasm_module,
-    );*/
 
     // Encode a bridging function to allocate strings so that the host
     // can call it to allocate a returned string.
@@ -360,6 +347,7 @@ fn encode_heap_alloc_exports<H: HeapManager>(heap: &H, wasm_module: &mut wasmgen
             &[],
             &mut scratch,
             expr_builder,
+            0,
         );
         expr_builder.end();
     }

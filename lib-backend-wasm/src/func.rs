@@ -70,6 +70,8 @@ impl<'a> ModuleEncodeWrapper<'a> {
     fn add_wasm_type(&mut self, wasm_functype: wasmgen::FuncType) -> wasmgen::TypeIdx {
         self.wasm_module.insert_type_into(wasm_functype)
     }
+
+    #[allow(dead_code)]
     fn add_ir_type_with_closure(
         &mut self,
         ir_params: &[ir::VarType],
@@ -114,6 +116,7 @@ pub fn encode_funcs<'a, Heap: HeapManager>(
     options: Options,
     wasm_module: &mut wasmgen::WasmModule,
 ) {
+    #[derive(Debug)]
     struct WasmRegistry {
         funcidx: wasmgen::FuncIdx,
         wasm_param_map: Box<[wasmgen::LocalIdx]>, // map converts wasm_param_map index to actual wasm param index
@@ -333,6 +336,7 @@ fn encode_result(
     }
 }
 
+#[allow(dead_code)]
 fn encode_load_dummies(
     wasm_valtypes: &[wasmgen::ValType],
     expr_builder: &mut wasmgen::ExprBuilder,
@@ -354,9 +358,15 @@ fn encode_drop_value(ir_vartype: ir::VarType, expr_builder: &mut wasmgen::ExprBu
             expr_builder.drop();
             expr_builder.drop();
         }
-        ir::VarType::Number | ir::VarType::Boolean | ir::VarType::String => expr_builder.drop(),
-        ir::VarType::StructT { typeidx: _ } => expr_builder.drop(),
+        ir::VarType::Number
+        | ir::VarType::Boolean
+        | ir::VarType::String
+        | ir::VarType::StructT { typeidx: _ } => expr_builder.drop(),
         ir::VarType::Undefined => {}
+        ir::VarType::Array => {
+            // TODO: Do we need to have 1 drop per array element?
+            expr_builder.drop();
+        }
         ir::VarType::Unassigned => panic!("Unassigned variable must not exist on the stack"),
     }
 }
@@ -602,6 +612,29 @@ fn encode_expr<H: HeapManager>(
             // net wasm stack: [] -> [funcidx]
             expr_builder.i32_const(tableidx as i32);
 
+            true
+        }
+        ir::ExprKind::PrimArray { elements } => {
+            assert!(
+                expr.vartype == Some(ir::VarType::Array),
+                "ICE: IR->Wasm: PrimArray does not have type Array"
+            );
+
+            for el in elements {
+                let vartype = el.vartype.unwrap();
+                encode_expr(el, ctx, mutctx, expr_builder);
+                encode_widening_operation(
+                    ir::VarType::Any,
+                    vartype,
+                    mutctx.scratch_mut(),
+                    expr_builder,
+                );
+            }
+            let elements_length = elements.len();
+            expr_builder.i32_const(elements_length as i32);
+            mutctx.set_temp_array_length(elements_length);
+            mutctx.heap_encode_dynamic_allocation(ctx.heap, ir::VarType::Array, expr_builder);
+            mutctx.reset_temp_array_length();
             true
         }
         ir::ExprKind::TypeCast {

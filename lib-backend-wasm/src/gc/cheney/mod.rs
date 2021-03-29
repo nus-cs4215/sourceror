@@ -38,6 +38,7 @@ pub mod wasmtest;
  * The direct function will take parameters with types as defined in the backend-wasm documentation (e.g. Number will take one f64, Func will take two i32s).
  * The indirect function is meant for Anys, it will take one i64(data).
  */
+#[allow(dead_code)]
 pub struct Cheney<'a, 'b, 'c> {
     struct_types: &'a [Box<[ir::VarType]>], // types of the fields of each struct type
     struct_field_byte_offsets: &'b [Box<[u32]>], // byte offsets of the fields of each struct type (each Box has same lengths as that of `struct_types`)
@@ -330,6 +331,7 @@ impl<'a, 'b, 'c> Cheney<'a, 'b, 'c> {
         wasm_local_map: &[wasmgen::LocalIdx],
         scratch: &mut Scratch,
         expr_builder: &mut wasmgen::ExprBuilder,
+        temp_array_length: usize,
     ) {
         // Algorithm:
         /*
@@ -359,6 +361,7 @@ impl<'a, 'b, 'c> Cheney<'a, 'b, 'c> {
         ret += 4;
         */
 
+        // check if there is enough space to encode
         // (end_mem_ptr - free_mem_ptr < size)
         // net wasm stack: [] -> [cond(i32)]
         expr_builder.global_get(self.end_mem_ptr);
@@ -367,6 +370,7 @@ impl<'a, 'b, 'c> Cheney<'a, 'b, 'c> {
         encode_size(expr_builder);
         expr_builder.i32_lt_u();
 
+        // Do cheney if not enough space
         // net wasm stack: [cond(i32)] -> []
         expr_builder.if_(&[]);
         {
@@ -417,6 +421,42 @@ impl<'a, 'b, 'c> Cheney<'a, 'b, 'c> {
             expr_builder.unreachable();
         }
         expr_builder.end();
+
+        if tag == ir::VarType::Array.tag() {
+            expr_builder.global_get(self.free_mem_ptr);
+            expr_builder.i32_const(2);
+            expr_builder.i32_add();
+            expr_builder.global_set(self.free_mem_ptr);
+
+            for i in (0..temp_array_length).rev() {
+                
+                let localidx_arr_val = scratch.push_i64();
+                let localidx_arr_tag = scratch.push_i32();
+                
+                // pop tag and data
+                expr_builder.local_set(localidx_arr_tag);
+                expr_builder.local_set(localidx_arr_val);
+                
+                // update free mem ptr
+                expr_builder.global_get(self.free_mem_ptr);
+                expr_builder.i32_const(i as i32 * 12);
+                expr_builder.i32_add();
+                
+                // store tag
+                expr_builder.local_get(localidx_arr_tag);
+                expr_builder.i32_store(wasmgen::MemArg::new4(8));
+
+                // store data
+                expr_builder.global_get(self.free_mem_ptr);
+                expr_builder.i32_const(i as i32 * 12);
+                expr_builder.i32_add();
+                expr_builder.local_get(localidx_arr_val);
+                expr_builder.i64_store(wasmgen::MemArg::new4(12));
+
+                scratch.pop_i32();
+                scratch.push_i64();
+            }
+        }
 
         // net wasm stack: [] -> [res(i32)]
         expr_builder.global_get(self.free_mem_ptr);
@@ -474,6 +514,7 @@ impl<'a, 'b, 'c> HeapManager for Cheney<'a, 'b, 'c> {
                     wasm_local_map,
                     scratch,
                     expr_builder,
+                    0,
                 );
 
                 // Write Undefined to all Any fields in the struct
@@ -523,14 +564,15 @@ impl<'a, 'b, 'c> HeapManager for Cheney<'a, 'b, 'c> {
         wasm_local_map: &[wasmgen::LocalIdx],
         scratch: &mut Scratch,
         expr_builder: &mut wasmgen::ExprBuilder,
+        temp_array_length: usize,
     ) {
         match ir_vartype {
-            ir::VarType::String => {
-                let localidx_str_len: wasmgen::LocalIdx = scratch.push_i32();
+            ir::VarType::String | ir::VarType::Array => {
+                let localidx_len: wasmgen::LocalIdx = scratch.push_i32();
                 let localidx_mem_size: wasmgen::LocalIdx = scratch.push_i32();
 
                 {
-                    expr_builder.local_tee(localidx_str_len);
+                    expr_builder.local_tee(localidx_len);
                 }
 
                 // Algorithm: mem_size = ((num_bytes + 11) & (~3))   // equivalent to (4 + round_up_to_multiple_of_4(num_bytes))
@@ -553,15 +595,16 @@ impl<'a, 'b, 'c> HeapManager for Cheney<'a, 'b, 'c> {
                     wasm_local_map,
                     scratch,
                     expr_builder,
+                    temp_array_length,
                 );
 
-                // write the string length
+                // write the string / array length
                 // net wasm stack: [i32(ptr)] -> [i32(ptr)]
                 {
                     let localidx_ret: wasmgen::LocalIdx = scratch.push_i32();
                     expr_builder.local_tee(localidx_ret);
                     expr_builder.local_get(localidx_ret);
-                    expr_builder.local_get(localidx_str_len);
+                    expr_builder.local_get(localidx_len);
                     expr_builder.i32_store(wasmgen::MemArg::new4(0));
                     scratch.pop_i32();
                 }
@@ -569,7 +612,7 @@ impl<'a, 'b, 'c> HeapManager for Cheney<'a, 'b, 'c> {
                 scratch.pop_i32();
                 scratch.pop_i32();
             }
-            _ => panic!("incorrect VarType, expected String"),
+            _ => panic!("incorrect VarType, expected Array or String"),
         }
     }
 
@@ -578,7 +621,7 @@ impl<'a, 'b, 'c> HeapManager for Cheney<'a, 'b, 'c> {
 
     // Encodes instructions to push local variables to gc_roots stack.
     // This should be called before a function which might allocate memory is called.
-    // It should be paired with a call to `encode_local_roots_elilogue()`.
+    // It should be paired with a call to `encode_local_roots_epilogue()`.
     // net wasm stack: [] -> []
     fn encode_local_roots_prologue(
         &self,
@@ -724,7 +767,7 @@ impl<'a, 'b, 'c> HeapManager for Cheney<'a, 'b, 'c> {
             local_types.iter().copied().zip(local_map.iter().copied())
         {
             match ir_vartype {
-                ir::VarType::String | ir::VarType::StructT { typeidx: _ } => {
+                ir::VarType::String | ir::VarType::StructT { typeidx: _ } | ir::VarType::Array => {
                     expr_builder.i32_const(-1);
                     expr_builder.local_set(wasm_local_map[wasm_local_map_index]);
                 }

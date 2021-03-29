@@ -77,6 +77,7 @@ pub trait HeapManager {
         wasm_local_map: &[wasmgen::LocalIdx],
         scratch: &mut Scratch,
         expr_builder: &mut wasmgen::ExprBuilder,
+        temp_array_length: usize,
     );
 
     type RootsStackHandle;

@@ -25,6 +25,7 @@ pub struct Leaky<'a, 'b, 'c> {
 
 const MEM_INITIAL_HEAP_SIZE: u32 = 1 << 4; // 1 MiB of initial heap space
 
+#[allow(dead_code)]
 impl<'a, 'b, 'c> Leaky<'a, 'b, 'c> {
     // Constructs a new leaky GC, and initializes it appropriately.
     pub fn new(
@@ -233,6 +234,7 @@ impl<'a, 'b, 'c> super::HeapManager for Leaky<'a, 'b, 'c> {
         _wasm_local_map: &[wasmgen::LocalIdx],
         scratch: &mut Scratch,
         expr_builder: &mut wasmgen::ExprBuilder,
+        _temp_length: usize,
     ) {
         match ir_vartype {
             ir::VarType::String => {

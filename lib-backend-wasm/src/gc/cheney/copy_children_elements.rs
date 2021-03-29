@@ -99,10 +99,13 @@ pub fn make_copy_children_elements(
                             expr_builder.i64_store(wasmgen::MemArg::new4(byte_offset + 4));
                             // the `data` of the Any is at offset 4
                         }
-                        ir::VarType::Unassigned => {}
-                        ir::VarType::Undefined => {}
-                        ir::VarType::Number => {}
-                        ir::VarType::Boolean => {}
+                        ir::VarType::Unassigned
+                        | ir::VarType::Undefined
+                        | ir::VarType::Number
+                        | ir::VarType::Boolean => {}
+                        ir::VarType::Array => {
+                            // TODO: Anything needed here?
+                        }
                         ir::VarType::String => {
                             // net wasm stack: [] -> []
                             gen(
@@ -210,7 +213,7 @@ pub fn make_copy_children_elements(
                 scratch: &mut Scratch,
                 localidx_param: wasmgen::LocalIdx,
                 byte_offset: u32,
-                tableidx: wasmgen::TableIdx,
+                _tableidx: wasmgen::TableIdx,
                 copy_func: wasmgen::FuncIdx,
                 heap_begin: u32,
                 is_string: bool,
