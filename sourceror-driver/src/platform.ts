@@ -4,6 +4,8 @@
  */
 
 import { Transcoder } from "./transcoder";
+const Runes = require("./runes.js");
+
 
 /**
  * The main function to use.
@@ -73,6 +75,12 @@ export function makePlatformImports(externalContext: any, transcoder: Transcoder
       imul: Math.imul,
       // random function
       random: Math.random,
+    },
+    // RUNES library 
+    runes: {
+      heart: () => {
+        return transcoder.encodeJson(Runes.primaryRuneToJson(Runes.heart));
+      }
     },
   };
 }

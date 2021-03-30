@@ -1,3 +1,5 @@
+import Bson from "bson";
+
 /**
  * This file contains the Decoder class, which decodes wasm handles into actually strings/booleans/etc.
  * This is needed because we can only transmit numbers directly through the FFI.
@@ -6,6 +8,7 @@
 export class Transcoder {
   mem: DataView;
   allocate_string: (len: number) => number;
+  allocate_object: (len: number) => number;
   constructor() {}
   setMem(mem: DataView) {
     this.mem = mem;
@@ -28,6 +31,18 @@ export class Transcoder {
     const bytes = encoder.encode(s);
     const handle = this.allocate_string(bytes.length);
     // note: no need to set the length in the string, because allocateString() will already do it
+    (new Uint8Array(this.mem.buffer, handle + 4, bytes.length)).set(bytes);
+    return handle;
+  }
+
+  decodeJson(handle: number): object {
+    const len = this.mem.getUint32(handle, true);
+    return Bson.deserialize(new Uint8Array(this.mem.buffer, handle + 4, len));
+  }
+
+  encodeJson(o: object): number {
+    const bytes = new Uint8Array(Bson.serialize(o).buffer);
+    const handle = this.allocate_object(bytes.length);
     (new Uint8Array(this.mem.buffer, handle + 4, bytes.length)).set(bytes);
     return handle;
   }
