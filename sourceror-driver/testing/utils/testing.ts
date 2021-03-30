@@ -1,5 +1,6 @@
 import { Context, Variant, SourceError, Value } from '../types'
-import { compileAndRunTest }  from '../compileAndRun'
+import { compileAndRunTest }  from '../compileAndRunTest'
+import {expect} from '@jest/globals'
 
 export interface TestContext extends Context {
   displayResult: string[]
@@ -40,6 +41,7 @@ export function expectResult(code: string, options: TestOptions = {}) {
 
 export async function testSuccess(code: string, options: TestOptions = { native: false }) {
   const testResult = await compileAndRunTest(code)
+  console.log(testResult);
   expect(testResult.errors).toEqual([])
   expect(testResult.resultStatus).toBe('finished')
   return testResult

@@ -1,14 +1,16 @@
 {
+  "type": "module",
   "name": "sourceror",
   "version": "0.7.1",
   "description": "Compiler toolchain from Source to WebAssembly",
   "dependencies": {
+    "@jest/globals": "^26.6.2",
     "js-slang": "^0.4.60",
     "node-getopt": "^0.3.2"
   },
   "devDependencies": {
     "@types/estree": "^0.0.45",
-    "@types/jest": "^26.0.20",
+    "@types/jest": "^26.0.22",
     "@types/node": "^14.0.14",
     "acorn": "^7.4.1",
     "jest": "^26.6.3",
@@ -32,7 +34,8 @@
     "build": "yarn run build:wasm && tsc && node postbuild.js",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "format:ci": "prettier --list-different \"src/**/*.{ts,tsx}\"",
-    "prepublishOnly": "yarn run build"
+    "prepublishOnly": "yarn run build",
+    "test": "node --experimental-wasm-modules node_modules/.bin/jest"
   },
   "repository": {
     "type": "git",
@@ -52,7 +55,7 @@
     "transform": {
       "\\.ts$": "<rootDir>/node_modules/ts-jest",
       "\\.js$": "<rootDir>/node_modules/babel-jest"
-    },
+},
     "testRegex": "/__tests__/.*\\.ts$",
     "testPathIgnorePatterns": [
       "/dist/",

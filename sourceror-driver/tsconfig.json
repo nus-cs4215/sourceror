@@ -18,9 +18,9 @@
     "strictNullChecks": true,
     "suppressImplicitAnyIndexErrors": true,
     "noUnusedLocals": true,
-    "incremental": true
+    "incremental": true, 
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["typePatches", "node", "jest"]
   },
   "include": ["src"],
-  "types": ["typePatches", "node", "jest"],
-  "typeRoots": ["./node_modules/@types"]
 }

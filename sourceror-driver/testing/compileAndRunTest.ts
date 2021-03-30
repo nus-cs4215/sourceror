@@ -20,7 +20,7 @@ export function compileAndRunTest(code: string, chapter = 1) {
       return {resultStatus: 'finished', result: returnedValue, errors: []};
     })
   .catch((e) => {
-    return {resultStatus: 'error', errors: e};
+    return {resultStatus: 'error', result: "", errors: e};
   })
 }
 

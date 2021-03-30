@@ -1,8 +1,11 @@
 import { stripIndent } from '../utils/formatters'
 import { expectResult } from '../utils/testing'
+import {jest, expect, test} from '@jest/globals'
+
+jest.useFakeTimers();
 
 test('Check that stack is at most 10k in size', () => {
-  return expectResult(stripIndent`
+  return expectResult(`
     function f(x) {
       if (x <= 0) {
         return 0;

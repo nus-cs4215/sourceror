@@ -1,6 +1,9 @@
 import { stripIndent } from '../utils/formatters'
 import { expectResult } from '../utils/testing'
 import { Constants } from '../../src/constants/constants'
+import {jest, expect, test} from '@jest/globals'
+
+jest.useFakeTimers();
 
 // This is bad practice. Don't do this!
 test('standalone block statements', () => {
