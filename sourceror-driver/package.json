@@ -5,6 +5,7 @@
   "description": "Compiler toolchain from Source to WebAssembly",
   "dependencies": {
     "@jest/globals": "^26.6.2",
+    "esm": "^3.2.25",
     "js-slang": "^0.4.60",
     "node-getopt": "^0.3.2"
   },
@@ -35,7 +36,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "format:ci": "prettier --list-different \"src/**/*.{ts,tsx}\"",
     "prepublishOnly": "yarn run build",
-    "test": "node --experimental-wasm-modules node_modules/.bin/jest"
+    "test": "node --experimental-wasm-modules -r esm node_modules/.bin/jest"
   },
   "repository": {
     "type": "git",
@@ -55,7 +56,7 @@
     "transform": {
       "\\.ts$": "<rootDir>/node_modules/ts-jest",
       "\\.js$": "<rootDir>/node_modules/babel-jest"
-},
+    },
     "testRegex": "/__tests__/.*\\.ts$",
     "testPathIgnorePatterns": [
       "/dist/",
