@@ -981,7 +981,16 @@ fn pre_parse_expr(
             for el in arr_expr.elements.iter_mut() {
                 let ret_el = match pre_parse_expr(el, name_ctx, depth, filename)? {
                     MultipleOrSingleBTreeMap::BTreeMap(map) => map,
-                    MultipleOrSingleBTreeMap::MultipleBtreeMap(_) => unreachable!(),
+                    MultipleOrSingleBTreeMap::MultipleBtreeMap(item) => item
+                        .into_iter()
+                        .fold(None, |prev, curr| {
+                            if let Some(prev) = prev {
+                                Some(varusage::merge_series(prev, curr))
+                            } else {
+                                Some(curr)
+                            }
+                        })
+                        .unwrap(),
                 };
                 ret.push(ret_el);
             }

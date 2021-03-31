@@ -542,7 +542,7 @@ pub fn encode_widening_operation(
                 expr_builder.i64_reinterpret_f64(); // convert f64 to i64
                 expr_builder.i32_const(source_type.tag());
             }
-            ir::VarType::Boolean | ir::VarType::String | ir::VarType::StructT { typeidx: _ } => {
+            ir::VarType::Boolean | ir::VarType::String | ir::VarType::StructT { typeidx: _ } | ir::VarType::Array => {
                 expr_builder.i64_extend_i32_u(); // convert i32 to i64
                 expr_builder.i32_const(source_type.tag());
             }
@@ -557,9 +557,6 @@ pub fn encode_widening_operation(
                 expr_builder.i64_or();
                 expr_builder.i32_const(source_type.tag());
                 scratch.pop_i32();
-            }
-            ir::VarType::Array => {
-                panic!("ICE: Cannot widen array types")
             }
         }
     } else {

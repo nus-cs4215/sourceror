@@ -2096,13 +2096,16 @@ fn post_parse_array_expr(
     for (i, el) in es_array_expr.elements.into_iter().enumerate() {
         let cloned_loc = loc.clone();
         let ret_el = match el.kind {
-            NodeKind::Literal(el) => {
-                post_parse_literal(el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program)?
+            NodeKind::Literal(el) => post_parse_literal(
+                el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program,
+            )?,
+            NodeKind::Identifier(el) => post_parse_varname(
+                el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program,
+            )?,
+            NodeKind::ArrayExpression(el) => {
+                post_parse_array_expr(el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program)?
             }
-            NodeKind::Identifier(el) => {
-                post_parse_varname(el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program)?
-            }
-            _ => unreachable!()
+            _ => unreachable!(),
         };
         ret.push(ret_el);
     }
