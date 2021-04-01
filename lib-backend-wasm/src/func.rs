@@ -1315,37 +1315,16 @@ fn encode_appl<H: HeapManager>(
             // push the tableidx onto the stack
             // net wasm stack: [] -> [tableidx]
             expr_builder.local_get(mutctx.wasm_local_slice(localidx_func)[0]);
-        }
 
-        // todo!(For optimisation, heap_encode_prologue_epilogue should only be called if the callee might allocate)
-        // Note: encode_args_to_call_function should be *before* encode_local_roots_prologue, since the args themselves might make function calls.
-        // if both: can do return_call_indirect according to WTCP
-        if ctx.options.wasm_tail_call && tail_call {
-            // This function might allocate memory, so we need to store the locals in the gc_roots stack first.
+            // todo!(For optimisation, heap_encode_prologue_epilogue should only be called if the callee might allocate)
+            // Note: encode_args_to_call_function should be *before* encode_local_roots_prologue, since the args themselves might make function calls.
+            // if both: can do return_call_indirect according to WTCP
+            if ctx.options.wasm_tail_call && tail_call {
+                // Use WTCP
+                // This function might allocate memory, so we need to store the locals in the gc_roots stack first.
 
-            // call the function with gc prologue and epilogue
-            return expr_builder.return_call_indirect(
-                mutctx
-                    .module_wrapper()
-                    .add_wasm_type(wasmgen::FuncType::new(
-                        Box::new([
-                            wasmgen::ValType::I32,
-                            wasmgen::ValType::I32,
-                            wasmgen::ValType::I32,
-                        ]),
-                        encode_result(Some(ir::VarType::Any), ctx.options.wasm_multi_value),
-                    )),
-                wasmgen::TableIdx { idx: 0 },
-            );
-        }
-        if !tail_call {
-            // This function is guaranteed not to allocate memory, so we don't need to put the locals on the gc_roots stack.
-
-            // add: expr_builder.i32_const(0);
-            // call the function (indirectly)
-            mutctx.heap_encode_prologue_epilogue(ctx.heap, expr_builder, |mutctx, expr_builder| {
-                // call the function (indirectly, using uniform calling convention)
-                expr_builder.call_indirect(
+                // call the function with gc prologue and epilogue
+                return expr_builder.return_call_indirect(
                     mutctx
                         .module_wrapper()
                         .add_wasm_type(wasmgen::FuncType::new(
@@ -1358,24 +1337,97 @@ fn encode_appl<H: HeapManager>(
                         )),
                     wasmgen::TableIdx { idx: 0 },
                 );
+            }
+            if !tail_call {
+                // This function is guaranteed not to allocate memory, so we don't need to put the locals on the gc_roots stack.
+
+                // add: expr_builder.i32_const(0);
+                // call the function (indirectly)
+                mutctx.heap_encode_prologue_epilogue(
+                    ctx.heap,
+                    expr_builder,
+                    |mutctx, expr_builder| {
+                        // call the function (indirectly, using uniform calling convention)
+                        expr_builder.call_indirect(
+                            mutctx
+                                .module_wrapper()
+                                .add_wasm_type(wasmgen::FuncType::new(
+                                    Box::new([
+                                        wasmgen::ValType::I32,
+                                        wasmgen::ValType::I32,
+                                        wasmgen::ValType::I32,
+                                    ]),
+                                    encode_result(
+                                        Some(ir::VarType::Any),
+                                        ctx.options.wasm_multi_value,
+                                    ),
+                                )),
+                            wasmgen::TableIdx { idx: 0 },
+                        );
+                    },
+                );
+            }
+
+            if ctx.options.wasm_tail_call {
+                // fetch return values from the location prescribed by the calling convention back to the stack
+                encode_post_appl_calling_conv(
+                    Some(ir::VarType::Any),
+                    ctx.options.wasm_multi_value,
+                    ctx.stackptr,
+                    mutctx.scratch_mut(),
+                    expr_builder,
+                );
+            }
+
+            if !ctx.options.wasm_tail_call && !tail_call {
+                // TODO: Use loops and make indirect calls until base case as per notes
+                // then we can return the value
+                // expr_builder.loop_(&[]); -> codewriter.rs
+            }
+        }
+
+        if !ctx.options.wasm_tail_call && tail_call {
+            mutctx.with_scratch_i32(|mutctx, stackptr_localidx| {
+                // load stackptr
+                // net wasm stack: [] -> [i32(stackptr)]
+                expr_builder.global_get(ctx.stackptr);
+                expr_builder.i32_const(16);
+                expr_builder.i32_sub();
+
+                // net wasm stack: [stackptr] -> [stackptr]
+                expr_builder.local_tee(stackptr_localidx);
+
+                // encode the proper caller id (which is the memory location of the SourceLocation)
+                // net wasm stack: [] -> [i32(callerid)]
+                expr_builder.i32_const(*ctx.appl_data_encoder.get(location).unwrap() as i32);
+                encode_store_memory(
+                    size_in_memory(ir::VarType::String),
+                    ir::VarType::String,
+                    ir::VarType::String,
+                    mutctx.scratch_mut(),
+                    expr_builder,
+                );
+
+                // net wasm stack: [] -> [stackptr]
+                expr_builder.local_get(stackptr_localidx);
+
+                // push the tableidx onto the stack
+                // net wasm stack: [] -> [tableidx]
+                expr_builder.local_get(mutctx.wasm_local_slice(localidx_func)[0]);
+                encode_store_memory(
+                    0,
+                    ir::VarType::String,
+                    ir::VarType::String,
+                    mutctx.scratch_mut(),
+                    expr_builder,
+                );
             });
-        }
 
-        if ctx.options.wasm_tail_call {
-            // fetch return values from the location prescribed by the calling convention back to the stack
-            encode_post_appl_calling_conv(
-                Some(ir::VarType::Any),
-                ctx.options.wasm_multi_value,
-                ctx.stackptr,
-                mutctx.scratch_mut(),
-                expr_builder,
-            );
-        }
-
-        if !ctx.options.wasm_tail_call && !tail_call {
-            // TODO: Use loops and make indirect calls until base case as per notes
-            // then we can return the value
-            // expr_builder.loop_(&[]); -> codewriter.rs
+            // tagging the tail call
+            // net wasm stack: [] -> [tail_call]
+            // return it
+            expr_builder.i32_const(tail_call as i32);
+            expr_builder.return_();
         }
     });
 }
