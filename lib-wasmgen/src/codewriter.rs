@@ -1,5 +1,6 @@
 /**
  * Structs and implementations for encoding instructions in an expression.
+ * https://pengowray.github.io/wasm-ops/
  */
 use super::*;
 use projstd::iter::SequentialCountAdapter;
