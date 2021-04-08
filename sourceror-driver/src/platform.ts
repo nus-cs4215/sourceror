@@ -4,7 +4,7 @@
  */
 
 import { Transcoder } from "./transcoder";
-const Runes = require("./runes.js");
+import {makeHeart, scale_independent, Rune} from "./runes";
 
 
 /**
@@ -78,9 +78,19 @@ export function makePlatformImports(externalContext: any, transcoder: Transcoder
     },
     // RUNES library 
     runes: {
-      heart: () => {
-        return transcoder.encodeJson(Runes.primaryRuneToJson(Runes.heart));
+      heart: () : number => {
+        // return transcoder.encodeJson(Runes.primaryRuneToJson(Runes.heart));
+        // pass array index to wasm 
+        let index = transcoder.setObject(makeHeart);
+        return index;
+      },
+
+      scale_independent: (ratio_x: number, ratio_y: number, rune_index: number) : number => {
+        let rune_object : Rune = transcoder.getObject(rune_index);
+        return transcoder.setObject(scale_independent(ratio_x, ratio_y, rune_object)); 
       }
+
+
     },
   };
 }

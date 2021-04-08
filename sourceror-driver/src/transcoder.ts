@@ -1,4 +1,6 @@
-import Bson from "bson";
+// import Bson from "bson";
+// import Pointer from "./types";
+
 
 /**
  * This file contains the Decoder class, which decodes wasm handles into actually strings/booleans/etc.
@@ -7,11 +9,17 @@ import Bson from "bson";
 
 export class Transcoder {
   mem: DataView;
+  object_store: Array<object>;
+  
   allocate_string: (len: number) => number;
   allocate_object: (len: number) => number;
+  
   constructor() {}
   setMem(mem: DataView) {
     this.mem = mem;
+  }
+  setObjectStore() {
+    this.object_store = [];
   }
   setAllocateStringFunc(func: (len: number) => number) {
     this.allocate_string = func;
@@ -35,15 +43,12 @@ export class Transcoder {
     return handle;
   }
 
-  decodeJson(handle: number): object {
-    const len = this.mem.getUint32(handle, true);
-    return Bson.deserialize(new Uint8Array(this.mem.buffer, handle + 4, len));
+  getObject(index: number): any {
+    return this.object_store[index];
   }
 
-  encodeJson(o: object): number {
-    const bytes = new Uint8Array(Bson.serialize(o).buffer);
-    const handle = this.allocate_object(bytes.length);
-    (new Uint8Array(this.mem.buffer, handle + 4, bytes.length)).set(bytes);
-    return handle;
+  setObject(o: any): number {
+    this.object_store.push(o);
+    return this.object_store.length - 1;
   }
 }
