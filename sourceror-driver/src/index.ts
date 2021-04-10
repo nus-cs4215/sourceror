@@ -8,7 +8,7 @@ export { makePlatformImports } from "./platform";
 import { Transcoder } from "./transcoder";
 export { Transcoder };
 import { cachedGetFile } from "./cache";
-import { tailCall } from "wasm-feature-detect";
+import { bulkMemory, multiValue, tailCall } from "wasm-feature-detect";
 
 export class CompileError extends Error {
 	constructor(message: string) {
@@ -135,10 +135,17 @@ export async function compile(
 		}
 	);
 
-	let isTailCallSupported = await tailCall();
-	console.info("WASM Tail Calls supported: ", isTailCallSupported);
+	
 
-	return Sourceror.compile(wasm_context, es_str, isTailCallSupported)
+	const compilationFlags: Sourceror.CompilationFlags = {
+		tailCall: await tailCall(),
+		bulkMemory: await bulkMemory(),
+		multiValue: await multiValue()
+	};
+	
+	console.info("WASM compilation falags: ", compilationFlags);
+
+	return Sourceror.compile(wasm_context, es_str, compilationFlags)
 		.then((wasm_binary: Uint8Array) => {
 			if (wasm_binary.byteLength > 0) {
 				return WebAssembly.compile(wasm_binary).catch((err: string) => {

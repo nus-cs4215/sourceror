@@ -79,7 +79,9 @@ impl projstd::log::Logger for MainLogger {
 pub async fn compile(
     context: i32,
     source_code: String,
-    enable_tail_calls: bool,
+    enable_multi_value: bool,
+    enable_bulk_memory: bool,
+    enable_tail_call: bool,
 ) -> js_sys::Uint8Array {
     // nice console errors in debug mode
     #[cfg(all(debug_assertions, target_arch = "wasm32"))]
@@ -98,7 +100,7 @@ pub async fn compile(
         let ir_program_opt = ir::opt::optimize_all(ir_program);
         let wasm_module = backend_wasm::run_backend(
             &ir_program_opt,
-            backend_wasm::Options::new(false, false, enable_tail_calls),
+            backend_wasm::Options::new(enable_multi_value, enable_bulk_memory, enable_tail_call),
         );
         let mut receiver = std::vec::Vec::<u8>::new();
         wasm_module.wasm_serialize(&mut receiver);

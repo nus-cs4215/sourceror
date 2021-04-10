@@ -90,6 +90,7 @@ pub struct Options {
     wasm_bulk_memory: bool, // Whether we can generate code that uses the WebAssembly bulk memory proposal
     wasm_tail_call: bool, // Whether we can generate code that uses the WebAssembly tail call proposal
 }
+
 impl Options {
     pub fn new(wasm_multi_value: bool, wasm_bulk_memory: bool, wasm_tail_call: bool) -> Options {
         Options {
