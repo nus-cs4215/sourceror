@@ -428,6 +428,17 @@ fn pre_parse_expr_statement(
                         ))
                     }
                 }
+                Node {
+                    loc,
+                    kind:
+                        NodeKind::MemberExpression(MemberExpression {
+                            object: _,
+                            property: _,
+                        }),
+                } => Err(CompileMessage::new_error(
+                    loc.into_sl(filename).to_owned(),
+                    ParseProgramError::ESTreeError("Appending to arrays not supported"),
+                )),
                 Node { loc, kind: _ } => Err(CompileMessage::new_error(
                     loc.into_sl(filename).to_owned(),
                     ParseProgramError::ESTreeError(

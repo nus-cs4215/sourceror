@@ -57,6 +57,7 @@ pub enum NodeKind {
     ExportNamedDeclaration(ExportNamedDeclaration),
     ExportSpecifier(ExportSpecifier),
     ArrayExpression(ArrayExpression),
+    MemberExpression(MemberExpression)
 }
 
 #[derive(Deserialize, Debug)]
@@ -303,6 +304,12 @@ pub struct ExportNamedDeclaration {
 pub struct ExportSpecifier {
     pub local: Box<Node>,
     pub exported: Box<Node>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct MemberExpression {
+    pub object: Identifier,
+    pub property: Literal
 }
 
 pub trait Function: Scope {
