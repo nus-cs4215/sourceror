@@ -2102,9 +2102,9 @@ fn post_parse_array_expr(
             NodeKind::Identifier(el) => post_parse_varname(
                 el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program,
             )?,
-            NodeKind::ArrayExpression(el) => {
-                post_parse_array_expr(el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program)?
-            }
+            NodeKind::ArrayExpression(el) => post_parse_array_expr(
+                el, cloned_loc, parse_ctx, depth, num_locals, filename, ir_program,
+            )?,
             _ => unreachable!(),
         };
         ret.push(ret_el);
@@ -2191,18 +2191,22 @@ fn as_block_statement_with_loc(es_node: Node) -> (BlockStatement, Option<esSL>) 
 }
 
 fn as_id(es_node: Node) -> Identifier {
-    if let NodeKind::Identifier(id) = es_node.kind {
-        id
-    } else {
-        pppanic();
+    match es_node.kind {
+        NodeKind::Identifier(id) => id,
+        NodeKind::MemberExpression(MemberExpression { object,property: _ }) => {
+            object
+        }
+        _ => pppanic()
     }
 }
 
 fn as_id_ref(es_node: &Node) -> &Identifier {
-    if let NodeKind::Identifier(id) = &es_node.kind {
-        id
-    } else {
-        pppanic();
+    match &es_node.kind {
+        NodeKind::Identifier(id) => id,
+        NodeKind::MemberExpression(MemberExpression { object, property: _}) => {
+            object
+        }
+        _ => pppanic()
     }
 }
 

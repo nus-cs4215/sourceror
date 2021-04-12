@@ -385,7 +385,7 @@ fn pre_parse_statement(
 
 fn pre_parse_expr_statement(
     es_expr_stmt: &mut ExpressionStatement,
-    _loc: &Option<esSL>,
+    loc: &Option<esSL>,
     name_ctx: &mut HashMap<String, PreVar>, // contains all names referenceable from outside the current sequence
     depth: usize,
     filename: Option<&str>,
@@ -429,16 +429,13 @@ fn pre_parse_expr_statement(
                     }
                 }
                 Node {
-                    loc,
+                    loc: _,
                     kind:
                         NodeKind::MemberExpression(MemberExpression {
-                            object: _,
+                            object,
                             property: _,
                         }),
-                } => Err(CompileMessage::new_error(
-                    loc.into_sl(filename).to_owned(),
-                    ParseProgramError::ESTreeError("Appending to arrays not supported"),
-                )),
+                } => pre_parse_identifier_use(object, loc, name_ctx, depth, filename),
                 Node { loc, kind: _ } => Err(CompileMessage::new_error(
                     loc.into_sl(filename).to_owned(),
                     ParseProgramError::ESTreeError(
