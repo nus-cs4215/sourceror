@@ -140,7 +140,40 @@ pub fn post_parse_program(
                         _ => {}
                     }
                 }
+            } else if let Node {
+                loc: _,
+                kind: NodeKind::ExpressionStatement(ExpressionStatement { expression }),
+            } = es_node
+            // Handling array assignment operations: arr[idx] = literal
+            {
+                if let Node {
+                    loc: _,
+                    kind:
+                        NodeKind::AssignmentExpression(AssignmentExpression {
+                            operator: _,
+                            left,
+                            right: _,
+                        }),
+                } = &**expression
+                {
+                    let local_id = as_id_ref(&**left);
+                    match local_id.prevar.as_ref().unwrap() {
+                        PreVar::Target(varlocid) => target_expr_entries.push((
+                            *varlocid,
+                            ir::TargetExpr::Global {
+                                globalidx: {
+                                    let tmp = ir_program.globals.len();
+                                    ir_program.globals.push(ir::VarType::Any);
+                                    tmp
+                                },
+                                next: None,
+                            },
+                        )),
+                        _ => {}
+                    }
+                }
             }
+
             Ok(())
         })?;
     }
@@ -1879,6 +1912,29 @@ fn post_parse_assign_expr(
             ParseProgramError::SourceRestrictionAssignmentOperatorError(es_assign_expr.operator),
         ));
     }
+
+    if let NodeKind::MemberExpression(MemberExpression {
+        object,
+        property: _,
+    }) = &es_assign_expr.left.kind
+    {
+        let varlocid = as_varlocid(object.prevar.unwrap());
+        return Ok(ir::Expr {
+            vartype: Some(ir::VarType::Undefined),
+            kind: ir::ExprKind::Assign {
+                target: parse_ctx.get_target(&varlocid).unwrap().clone(),
+                expr: Box::new(post_parse_expr(
+                    *es_assign_expr.right,
+                    parse_ctx,
+                    depth,
+                    num_locals,
+                    filename,
+                    ir_program,
+                )?),
+            },
+        });
+    }
+
     // an assignment expr, that returns undefined
     let varlocid = as_varlocid(as_id(*es_assign_expr.left).prevar.unwrap());
     Ok(ir::Expr {
@@ -2193,20 +2249,22 @@ fn as_block_statement_with_loc(es_node: Node) -> (BlockStatement, Option<esSL>) 
 fn as_id(es_node: Node) -> Identifier {
     match es_node.kind {
         NodeKind::Identifier(id) => id,
-        NodeKind::MemberExpression(MemberExpression { object,property: _ }) => {
-            object
-        }
-        _ => pppanic()
+        NodeKind::MemberExpression(MemberExpression {
+            object,
+            property: _,
+        }) => object,
+        _ => pppanic(),
     }
 }
 
 fn as_id_ref(es_node: &Node) -> &Identifier {
     match &es_node.kind {
         NodeKind::Identifier(id) => id,
-        NodeKind::MemberExpression(MemberExpression { object, property: _}) => {
-            object
-        }
-        _ => pppanic()
+        NodeKind::MemberExpression(MemberExpression {
+            object,
+            property: _,
+        }) => object,
+        _ => pppanic(),
     }
 }
 
