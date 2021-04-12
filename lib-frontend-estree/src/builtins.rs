@@ -112,7 +112,7 @@ fn register_unary_op(
         result: Some(ir_vartype),
         expr: ir_expr,
         signature_filter: Default::default(),
-        tail_call: false, // TODO: Check problems
+        tail_call: false,
     });
 
     // insert the necessary things into name_ctx and parse_ctx

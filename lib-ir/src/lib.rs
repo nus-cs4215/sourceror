@@ -311,7 +311,7 @@ impl Program {
     // The caller should only use the functions that match the funcidxs specified in the returned array of pre-declared operators.
     // Other things in the `funcs` array should not be used.
     pub fn new_with_imports(imports: Box<[Import]>) -> Program {
-        let mut program = Program {
+        let program = Program {
             struct_types: Default::default(),
             imports: imports,
             funcs: Default::default(),

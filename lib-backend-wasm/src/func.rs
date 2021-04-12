@@ -1426,9 +1426,11 @@ fn encode_appl<H: HeapManager>(
                                     );
                                 },
                             );
+
                             // test the condition
                             expr_builder.if_(&[]);
                             expr_builder.loop_(&[]);
+
                             // check for i32 tag
                             // tail_call == false -> reached the end
                             // encode tail call again
@@ -1450,6 +1452,7 @@ fn encode_appl<H: HeapManager>(
                                     );
                                 }
                             });
+
                             mutctx.heap_encode_prologue_epilogue(
                                 ctx.heap,
                                 expr_builder,
@@ -1472,9 +1475,11 @@ fn encode_appl<H: HeapManager>(
                                     );
                                 },
                             );
+
                             expr_builder.br_if(0);
                             expr_builder.end();
                             expr_builder.end();
+                            // end of all things
                             encode_post_appl_calling_conv(
                                 Some(ir::VarType::Any),
                                 ctx.options.wasm_multi_value,

@@ -200,7 +200,7 @@ impl TableSection {
         TableIdx { idx: 0 }
     }
     // returns the old size (which is the index of the 0th element being added)
-    pub fn increase_table_limit(&mut self, tableidx: TableIdx, increment: u32) -> u32 {
+    pub fn increase_table_limit(&mut self, _tableidx: TableIdx, increment: u32) -> u32 {
         let limits: &mut Limits = &mut self.content.last_mut().unwrap().table_type.limits;
         match limits {
             Limits::Unbounded { min: _ } => {

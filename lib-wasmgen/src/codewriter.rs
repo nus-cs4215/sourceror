@@ -746,7 +746,7 @@ impl ExprBuilder {
         self.append_opcode(OpCode::MemoryGrow);
         memidx.wasm_serialize(&mut self.bytecode);
     }
-    pub fn memory_init(&mut self, memidx: MemIdx) {
+    pub fn memory_init(&mut self, _memidx: MemIdx) {
         unimplemented!();
     }
     pub fn data_drop(&mut self) {

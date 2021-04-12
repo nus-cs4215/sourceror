@@ -33,7 +33,7 @@ fn write_new_expr(
     num_decls_for_narrow_local: Option<usize>,
     then: Expr,
 ) {
-    if let Some(num_decls) = num_decls_for_narrow_local {
+    if let Some(_num_decls) = num_decls_for_narrow_local {
         *out = Expr {
             vartype: then.vartype,
             kind: ExprKind::Declaration {
@@ -129,7 +129,7 @@ fn optimize_expr(expr: &mut Expr, local_map: &mut Relabeller) -> bool {
             func,
             args,
             location: _,
-            tail_call,
+            tail_call: _,
         } => {
             optimize_expr(func, local_map)
                 | args
@@ -139,7 +139,7 @@ fn optimize_expr(expr: &mut Expr, local_map: &mut Relabeller) -> bool {
         ExprKind::DirectAppl {
             funcidx: _,
             args,
-            tail_call,
+            tail_call: _,
         } => args
             .iter_mut()
             .fold(false, |prev, arg| prev | optimize_expr(arg, local_map)),
