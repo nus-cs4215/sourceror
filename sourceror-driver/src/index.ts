@@ -201,6 +201,7 @@ function read_js_result(linear_memory: WebAssembly.Memory): any {
 			const result = chunkedArray.map((element, i) => {
 				const tag = element[0];
 				if (tag === 2) {
+					// handle numbers
 					return mem.getFloat64(ptr + i * 12 + 8, true);
 				}
 
@@ -241,9 +242,8 @@ function parseDataByTag(
 		case 5:
 			return "function";
 
-		
 		case 6:
-			return "array"
+			return "array";
 
 		default:
 			return null;
