@@ -915,10 +915,10 @@ fn encode_expr<H: HeapManager>(
             // - the return type is at least as wide as the inner expr type
             match inner_expr.vartype {
                 None => panic!("ICE: IR->Wasm: expression in return statement cannot be Void"),
-                Some(inner_type) => {
+                Some(_inner_type) => {
                     match ctx.return_type {
                         None => panic!("ICE: IR->Wasm: cannot have return expression in a function that returns Void"),
-                        Some(ret_type) => {
+                        Some(_ret_type) => {
                             // net wasm stack: [] -> [<expr.vartype>]
                             encode_expr(inner_expr, ctx, mutctx, expr_builder);
                             encode_return_calling_conv(
@@ -929,7 +929,7 @@ fn encode_expr<H: HeapManager>(
                                 mutctx.scratch_mut(),
                                 expr_builder,
                             );
-                            expr_builder.i32_const(0);
+                            encode_load_dummies(&[wasmgen::ValType::I32], expr_builder);
                             // return the value on the stack (or in the unprotected stack) (which now has the correct type)
                             expr_builder.return_();
                         }
@@ -1321,7 +1321,6 @@ fn encode_appl<H: HeapManager>(
             if ctx.options.wasm_tail_call && tail_call {
                 // Use WTCP
                 // This function might allocate memory, so we need to store the locals in the gc_roots stack first.
-
                 // call the function with gc prologue and epilogue
                 return expr_builder.return_call_indirect(
                     mutctx
@@ -1385,17 +1384,17 @@ fn encode_appl<H: HeapManager>(
                         expr_builder,
                         |mutctx, expr_builder| {
                             // encode tail call
+                            let loops: &[u32] = &[12, 8, 4, 0];
                             mutctx.with_scratch_i32(|mutctx, stackptr_localidx| {
                                 expr_builder.global_get(ctx.stackptr);
                                 expr_builder.i32_const(16);
                                 expr_builder.i32_sub();
                                 expr_builder.local_set(stackptr_localidx);
 
-                                // 12, 8, 4 , 0
-                                for s in (0..4).rev() {
+                                for size in loops {
                                     expr_builder.local_get(stackptr_localidx);
                                     encode_load_memory(
-                                        s * size_in_memory(ir::VarType::String),
+                                        *size,
                                         ir::VarType::String,
                                         ir::VarType::String,
                                         mutctx.scratch_mut(),
@@ -1440,11 +1439,10 @@ fn encode_appl<H: HeapManager>(
                                 expr_builder.i32_sub();
                                 expr_builder.local_set(stackptr_localidx);
 
-                                // 12, 8, 4 , 0
-                                for s in (0..4).rev() {
+                                for size in loops {
                                     expr_builder.local_get(stackptr_localidx);
                                     encode_load_memory(
-                                        s * size_in_memory(ir::VarType::String),
+                                        *size,
                                         ir::VarType::String,
                                         ir::VarType::String,
                                         mutctx.scratch_mut(),
@@ -1475,7 +1473,6 @@ fn encode_appl<H: HeapManager>(
                                     );
                                 },
                             );
-
                             expr_builder.br_if(0);
                             expr_builder.end();
                             expr_builder.end();

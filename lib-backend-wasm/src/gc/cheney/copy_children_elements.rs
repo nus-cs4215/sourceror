@@ -210,7 +210,7 @@ pub fn make_copy_children_elements(
                 scratch: &mut Scratch,
                 localidx_param: wasmgen::LocalIdx,
                 byte_offset: u32,
-                tableidx: wasmgen::TableIdx,
+                _tableidx: wasmgen::TableIdx,
                 copy_func: wasmgen::FuncIdx,
                 heap_begin: u32,
                 is_string: bool,

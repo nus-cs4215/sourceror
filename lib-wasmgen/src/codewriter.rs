@@ -1,6 +1,6 @@
 /**
  * Structs and implementations for encoding instructions in an expression.
- * https://pengowray.github.io/wasm-ops/
+ * Refer to the webassembly specification for details: https://webassembly.github.io/spec/core/_download/WebAssembly.pdf
  */
 use super::*;
 use projstd::iter::SequentialCountAdapter;
