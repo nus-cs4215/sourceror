@@ -4,7 +4,6 @@
   "description": "Compiler toolchain from Source to WebAssembly",
   "dependencies": {
     "acorn": "^7.3.1",
-    "bson": "^4.2.3",
     "js-slang": "^0.4.60",
     "node-getopt": "^0.3.2"
   },
