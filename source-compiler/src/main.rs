@@ -5,7 +5,7 @@ use projstd::log;
 "#;*/
 
 const SOURCE_CODE: &'static str = r#"
-{"type":"Program","start":0,"end":67,"body":[{"type":"ImportDeclaration","start":0,"end":57,"specifiers":[{"type":"ImportSpecifier","start":9,"end":14,"imported":{"type":"Identifier","start":9,"end":14,"name":"heart"},"local":{"type":"Identifier","start":9,"end":14,"name":"heart"}}],"source":{"type":"Literal","start":22,"end":56,"value":"http://INPUT_WEBSITE_LINK/runes.source","raw":"\"http://INPUT_WEBSITE_LINK/runes.source\""}},{"type":"ExpressionStatement","start":59,"end":67,"expression":{"type":"CallExpression","start":59,"end":66,"callee":{"type":"Identifier","start":59,"end":64,"name":"heart"},"arguments":[],"optional":false}}],"sourceType":"module"}
+{"type":"Program","start":0,"end":67,"body":[{"type":"ImportDeclaration","start":0,"end":57,"specifiers":[{"type":"ImportSpecifier","start":9,"end":14,"imported":{"type":"Identifier","start":9,"end":14,"name":"heart"},"local":{"type":"Identifier","start":9,"end":14,"name":"heart"}}],"source":{"type":"Literal","start":22,"end":56,"value":"http://btzy.github.io/libsourceror/std/runes.source","raw":"\"http://btzy.github.io/libsourceror/std/runes.source\""}},{"type":"ExpressionStatement","start":59,"end":67,"expression":{"type":"CallExpression","start":59,"end":66,"callee":{"type":"Identifier","start":59,"end":64,"name":"heart"},"arguments":[],"optional":false}}],"sourceType":"module"}
 "#;
 
 // const SOURCE_CODE: &'static str = r#"
@@ -47,7 +47,7 @@ scale_independent runes scale_independent number
 "#;
 
 const IMPORT_RUNES: &'static str = r#"
-{"type":"Program","start":0,"end":110,"body":[{"type":"ImportDeclaration","start":0,"end":73,"specifiers":[{"type":"ImportSpecifier","start":9,"end":14,"imported":{"type":"Identifier","start":9,"end":14,"name":"heart"},"local":{"type":"Identifier","start":9,"end":14,"name":"heart"}},{"type":"ImportSpecifier","start":16,"end":33,"imported":{"type":"Identifier","start":16,"end":33,"name":"scale_independent"},"local":{"type":"Identifier","start":16,"end":33,"name":"scale_independent"}}],"source":{"type":"Literal","start":41,"end":72,"value":"http://INPUT_WEBSITE_LINK/runes.ffi","raw":"\"http://INPUT_WEBSITE_LINK/runes.ffi\""}},{"type":"ExportNamedDeclaration","start":74,"end":110,"declaration":null,"specifiers":[{"type":"ExportSpecifier","start":83,"end":88,"local":{"type":"Identifier","start":83,"end":88,"name":"heart"},"exported":{"type":"Identifier","start":83,"end":88,"name":"heart"}},{"type":"ExportSpecifier","start":90,"end":107,"local":{"type":"Identifier","start":90,"end":107,"name":"scale_independent"},"exported":{"type":"Identifier","start":90,"end":107,"name":"scale_independent"}}],"source":null}],"sourceType":"module"}
+{"type":"Program","start":0,"end":110,"body":[{"type":"ImportDeclaration","start":0,"end":73,"specifiers":[{"type":"ImportSpecifier","start":9,"end":14,"imported":{"type":"Identifier","start":9,"end":14,"name":"heart"},"local":{"type":"Identifier","start":9,"end":14,"name":"heart"}},{"type":"ImportSpecifier","start":16,"end":33,"imported":{"type":"Identifier","start":16,"end":33,"name":"scale_independent"},"local":{"type":"Identifier","start":16,"end":33,"name":"scale_independent"}}],"source":{"type":"Literal","start":41,"end":72,"value":"http://btzy.github.io/libsourceror/std/runes.ffi","raw":"\"http://btzy.github.io/libsourceror/std/runes.ffi\""}},{"type":"ExportNamedDeclaration","start":74,"end":110,"declaration":null,"specifiers":[{"type":"ExportSpecifier","start":83,"end":88,"local":{"type":"Identifier","start":83,"end":88,"name":"heart"},"exported":{"type":"Identifier","start":83,"end":88,"name":"heart"}},{"type":"ExportSpecifier","start":90,"end":107,"local":{"type":"Identifier","start":90,"end":107,"name":"scale_independent"},"exported":{"type":"Identifier","start":90,"end":107,"name":"scale_independent"}}],"source":null}],"sourceType":"module"}
 "#;
 
 #[derive(Copy, Clone)]
@@ -69,8 +69,8 @@ async fn fetch_dep_proxy(name: String) -> Option<String> {
         "https://btzy.github.io/libsourceror/std/misc.ffi" => Some(IMPORT_MISC_FFI.to_owned()),
         "https://btzy.github.io/libsourceror/std/math.source" => Some(IMPORT_MATH.to_owned()),
         "https://btzy.github.io/libsourceror/std/math.ffi" => Some(IMPORT_MATH_FFI.to_owned()),
-        "http://INPUT_WEBSITE_LINK/runes.source" => Some(IMPORT_RUNES.to_owned()),
-        "http://INPUT_WEBSITE_LINK/runes.ffi" => Some(IMPORT_RUNES_FFI.to_owned()),
+        "http://btzy.github.io/libsourceror/std/runes.source" => Some(IMPORT_RUNES.to_owned()),
+        "http://btzy.github.io/libsourceror/std/runes.ffi" => Some(IMPORT_RUNES_FFI.to_owned()),
         _ => None,
     }
 }

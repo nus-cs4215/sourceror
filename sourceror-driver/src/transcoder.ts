@@ -1,7 +1,3 @@
-// import Bson from "bson";
-// import Pointer from "./types";
-
-
 /**
  * This file contains the Decoder class, which decodes wasm handles into actually strings/booleans/etc.
  * This is needed because we can only transmit numbers directly through the FFI.
