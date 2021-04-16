@@ -113,6 +113,10 @@ fn optimize_expr(
             assert!(expr.vartype == Some(VarType::Array));
             false
         }
+        ExprKind::ArrayAccess {
+            object,
+            property: _,
+        } => relabel_target(object, local_map),
         ExprKind::PrimFunc {
             funcidxs: _,
             closure,

@@ -164,6 +164,10 @@ pub enum ExprKind {
     PrimArray {
         elements: Vec<Expr>,
     },
+    ArrayAccess {
+        object: TargetExpr,
+        property: u32,
+    },
     PrimFunc {
         funcidxs: Box<[OverloadEntry]>, // overload set, matched in priority from back to front.  Backend shall coalesce identical callstubs whenever possible.
         closure: Box<Expr>, // Closure, that must be a pointer (that could be null) or undefined (encoded as a GC undefined/null, and no overload should want a closure param), and will be type-erased (the pointer requirement allows the GC to understand it)

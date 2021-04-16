@@ -637,6 +637,14 @@ fn encode_expr<H: HeapManager>(
             mutctx.reset_temp_array_length();
             true
         }
+        ir::ExprKind::ArrayAccess {
+            object,
+            property: _,
+        } => {
+            assert!(expr.vartype == Some(ir::VarType::Any));
+            encode_target_value(object, expr.vartype.unwrap(), ctx, mutctx, expr_builder);
+            true
+        }
         ir::ExprKind::TypeCast {
             test: arg,
             expected,
@@ -1053,6 +1061,7 @@ fn encode_expr<H: HeapManager>(
 // Loads the eventual value of `source`, following all struct fields, onto the stack, encoded as `outgoing_vartype`.
 // `outgoing_vartype` is required to be equivalent or subtype of the source vartype.  (Otherwise it means the optimiser is broken.)
 // net wasm stack: [] -> [<outgoing_vartype>]
+// TODONIG: add ability to access array entries
 fn encode_target_value<H: HeapManager>(
     source: &ir::TargetExpr,
     outgoing_vartype: ir::VarType,

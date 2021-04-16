@@ -38,10 +38,11 @@ fn populate_properties(
             for oe in &**funcidxs {
                 set_has_indirect_calls(&mut func_props[oe.funcidx]);
             }
-        },
-        ExprKind::PrimArray {elements} => {
-            elements.iter_mut().map(|el| populate_properties(funcidx, el, func_props, site)).collect()
-        },
+        }
+        ExprKind::PrimArray { elements } => elements
+            .iter_mut()
+            .map(|el| populate_properties(funcidx, el, func_props, site))
+            .collect(),
         ExprKind::TypeCast {
             test,
             expected: _,
@@ -62,7 +63,11 @@ fn populate_properties(
             );
             populate_properties(funcidx, false_expr, func_props, site);
         }
-        ExprKind::VarName { source: _ } => {
+        ExprKind::VarName { source: _ }
+        | ExprKind::ArrayAccess {
+            object: _,
+            property: _,
+        } => {
             inc_cost(&mut func_props[funcidx]);
         }
         ExprKind::PrimAppl { prim_inst: _, args } => {

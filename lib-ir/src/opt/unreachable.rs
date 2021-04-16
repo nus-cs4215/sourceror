@@ -49,7 +49,11 @@ fn optimize_expr(expr: &mut Expr) -> bool {
                 | optimize_expr(&mut **true_expr)
                 | optimize_expr(&mut **false_expr)
         }
-        ExprKind::VarName { source: _ } => false,
+        ExprKind::VarName { source: _ }
+        | ExprKind::ArrayAccess {
+            object: _,
+            property: _,
+        } => false,
         ExprKind::PrimAppl { prim_inst: _, args } => args
             .iter_mut()
             .fold(false, |prev, arg| prev | optimize_expr(arg)),

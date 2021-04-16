@@ -67,9 +67,9 @@ fn optimize_expr(expr: &mut Expr, local_map: &mut Relabeller) -> bool {
             funcidxs: _,
             closure,
         } => optimize_expr(&mut **closure, local_map),
-        ExprKind::PrimArray {elements} => {
-            elements.into_iter().fold(false, |prev, arg| prev | optimize_expr(arg, local_map))
-        },
+        ExprKind::PrimArray { elements } => elements
+            .into_iter()
+            .fold(false, |prev, arg| prev | optimize_expr(arg, local_map)),
         ExprKind::TypeCast {
             test,
             expected,
@@ -124,7 +124,11 @@ fn optimize_expr(expr: &mut Expr, local_map: &mut Relabeller) -> bool {
                 panic!("Vartype cannot be none for TypeCast test expr");
             }
         }
-        ExprKind::VarName { source } => relabel_target(source, local_map),
+        ExprKind::VarName { source }
+        | ExprKind::ArrayAccess {
+            object: source,
+            property: _,
+        } => relabel_target(source, local_map),
         ExprKind::PrimAppl { prim_inst: _, args } => args
             .iter_mut()
             .fold(false, |prev, arg| prev | optimize_expr(arg, local_map)),

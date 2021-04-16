@@ -20,6 +20,10 @@ pub fn relabel(expr: &mut Expr, relabeller: &mut Relabeller) -> bool {
         ExprKind::PrimArray { elements } => elements
             .into_iter()
             .fold(false, |prev, arg| prev | relabel(arg, relabeller)),
+        ExprKind::ArrayAccess {
+            object,
+            property: _,
+        } => relabel_target(object, relabeller),
         ExprKind::TypeCast {
             test,
             expected: _,

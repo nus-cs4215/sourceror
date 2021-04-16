@@ -1704,9 +1704,12 @@ fn post_parse_expr(
         ),
         NodeKind::MemberExpression(MemberExpression {
             object,
-            property: _,
-        }) => post_parse_varname(
+            property: Literal {
+                value: LiteralValue::Number(arr_idx),
+            },
+        }) => post_parse_member_expression(
             object,
+            arr_idx as u32,
             es_expr.loc,
             parse_ctx,
             depth,
@@ -1715,6 +1718,36 @@ fn post_parse_expr(
             ir_program,
         ),
         _ => pppanic(),
+    }
+}
+
+fn post_parse_member_expression(
+    es_id: Identifier,
+    es_property: u32,
+    loc: Option<esSL>,
+    parse_ctx: &mut ParseState,
+    _depth: usize,
+    _num_locals: usize, // current number of IR locals
+    _filename: Option<&str>,
+    _ir_program: &mut ir::Program,
+) -> Result<ir::Expr, CompileMessage<ParseProgramError>> {
+    match es_id.prevar.unwrap() {
+        PreVar::Target(varlocid) => {
+            Ok(
+                if let Some(ir_target_expr) = parse_ctx.get_target(&varlocid) {
+                    ir::Expr {
+                        vartype: Some(ir::VarType::Any),
+                        kind: ir::ExprKind::ArrayAccess {
+                            object: ir_target_expr.clone(),
+                            property: es_property,
+                        },
+                    }
+                } else {
+                    make_trap_for_accessing_var_before_init(as_ir_sl(&loc, 0 /*FILE*/))
+                },
+            )
+        }
+        PreVar::Direct => unimplemented!(),
     }
 }
 

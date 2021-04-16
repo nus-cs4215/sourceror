@@ -32,11 +32,9 @@ fn relabel_site(expr: &mut Expr, site: SiteProperties, num_landings: usize) -> b
             funcidxs: _,
             closure,
         } => relabel_site(&mut **closure, site, num_landings),
-        ExprKind::PrimArray {elements} => {
-            elements.into_iter().fold(false, |prev, arg| {
-                prev | relabel_site(arg, site, num_landings)
-            })
-        },
+        ExprKind::PrimArray { elements } => elements.into_iter().fold(false, |prev, arg| {
+            prev | relabel_site(arg, site, num_landings)
+        }),
         ExprKind::TypeCast {
             test,
             expected: _,
@@ -48,7 +46,11 @@ fn relabel_site(expr: &mut Expr, site: SiteProperties, num_landings: usize) -> b
                 | relabel_site(&mut **true_expr, site, num_landings)
                 | relabel_site(&mut **false_expr, site, num_landings)
         }
-        ExprKind::VarName { source } => relabel_site_target(source, site),
+        ExprKind::VarName { source }
+        | ExprKind::ArrayAccess {
+            object: source,
+            property: _,
+        } => relabel_site_target(source, site),
         ExprKind::PrimAppl { prim_inst: _, args } => args.iter_mut().fold(false, |prev, arg| {
             prev | relabel_site(arg, site, num_landings)
         }),

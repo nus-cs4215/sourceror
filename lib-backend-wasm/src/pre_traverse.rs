@@ -76,7 +76,7 @@ fn pre_traverse_expr_kind(expr_kind: &ir::ExprKind, res: &mut TraverseResult) {
                     res.string_pool.insert(val);
                 }
             })
-            .collect(), 
+            .collect(),
         ir::ExprKind::TypeCast {
             test,
             expected: _,
@@ -89,6 +89,10 @@ fn pre_traverse_expr_kind(expr_kind: &ir::ExprKind, res: &mut TraverseResult) {
             pre_traverse_expr(false_expr, res);
         }
         ir::ExprKind::VarName { source: _ } => {}
+        ir::ExprKind::ArrayAccess {
+            object: _,
+            property: _,
+        } => {}
         ir::ExprKind::PrimAppl { prim_inst: _, args } => pre_traverse_exprs(args, res),
         ir::ExprKind::Appl {
             func,
