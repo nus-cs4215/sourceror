@@ -1702,6 +1702,18 @@ fn post_parse_expr(
             filename,
             ir_program,
         ),
+        NodeKind::MemberExpression(MemberExpression {
+            object,
+            property: _,
+        }) => post_parse_varname(
+            object,
+            es_expr.loc,
+            parse_ctx,
+            depth,
+            num_locals,
+            filename,
+            ir_program,
+        ),
         _ => pppanic(),
     }
 }

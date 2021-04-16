@@ -855,7 +855,11 @@ fn pre_parse_expr(
     filename: Option<&str>,
 ) -> Result<MultipleOrSingleBTreeMap, CompileMessage<ParseProgramError>> {
     match &mut es_expr.kind {
-        NodeKind::Identifier(identifier) => {
+        NodeKind::Identifier(identifier)
+        | NodeKind::MemberExpression(MemberExpression {
+            object: identifier,
+            property: _,
+        }) => {
             let ret =
                 pre_parse_identifier_use(identifier, &es_expr.loc, name_ctx, depth, filename)?;
             Ok(MultipleOrSingleBTreeMap::BTreeMap(ret))
