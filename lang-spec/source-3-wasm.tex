@@ -1,1 +1,72 @@
 \input source_header.tex
+
+
+\newcommand{\Rule}[2]{\genfrac{}{}{0.7pt}{}{{\setlength{\fboxrule}{0pt}\setlength{\fboxsep}{3mm}\fbox{$#1$}}}{{\setlength{\fboxrule}{0pt}\setlength{\fboxsep}{3mm}\fbox{$#2$}}}}
+
+\newcommand{\TruE}{\textbf{\texttt{true}}}
+\newcommand{\FalsE}{\textbf{\texttt{false}}}
+\newcommand{\Rc}{\texttt{\}}}
+\newcommand{\Lc}{\texttt{\{}}
+\newcommand{\Rp}{\texttt{)}}
+\newcommand{\Lp}{\texttt{(}}
+\newcommand{\Fun}{\textbf{\texttt{function}}}
+\newcommand{\Let}{\textbf{\texttt{let}}}
+\newcommand{\Return}{\textbf{\texttt{return}}}
+\newcommand{\Const}{\textbf{\texttt{const}}}
+\newcommand{\If}{\textbf{\texttt{if}}}
+\newcommand{\Else}{\textbf{\texttt{else}}}
+\newcommand{\Bool}{\texttt{bool}}
+\newcommand{\Number}{\texttt{number}}
+\newcommand{\String}{\texttt{string}}
+\newcommand{\Undefined}{\texttt{undefined}}
+
+\newtheorem{definition}{Definition}[section]
+\begin{document}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\docheader{2021}{Source}{\S 3 WebAssembly}{Nigel Lee \& Alex Peng}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input source_intro.tex
+
+Source \S 1 WebAssembly is the dialect of Source \S 3 used in Sourceror, an experimental compiler from Source \S 3 to WebAssembly.  This dialect is mostly similar to Source \S 3.
+
+\section{Changes compared to Vanilla Source \S 3}
+
+\subsection*{Language}  
+
+All language features of Source \S 3 are supported including support for proper tail calls.
+
+\subsection*{Error Handling}
+
+Compilation errors produce error messages with line numbers, just like in Source \S 3.  Runtime type errors currently produce error messages without any location information.
+
+\input source_bnf.tex
+
+\input source_3_bnf_with_import_export.tex
+
+\newpage
+
+\input source_return.tex
+
+\input source_import_wasm.tex
+
+\input source_export.tex
+
+\input source_boolean_operators.tex
+
+\input source_names_lang.tex
+
+\input source_numbers.tex
+
+\input source_strings.tex
+
+\input source_comments.tex
+
+\input source_overloading.tex
+
+\input source_typing.tex
+
+\input source_import_syntax.tex
+
+\input source_js_differences
+
+\end{document}
