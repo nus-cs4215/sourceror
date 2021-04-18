@@ -15,7 +15,7 @@ test('Check that stack is at most 10k in size', async t => {
     f(10000);
     `;
     const chapter: number = 1;
-	const res = (await compileAndRunTest(code, chapter));
+	  const res = (await compileAndRunTest(code, chapter));
     t.timeout(10000);
     t.is(res.resultStatus, "error");
     t.is(res.result, '');
@@ -33,7 +33,7 @@ test('Simple tail call returns work', async t => {
     }
     f(5000, 5000);
     `;
-    const chapter: number = 1;
+  const chapter: number = 1;
 	const res = (await compileAndRunTest(code, chapter));
   t.is(res.resultStatus, "finished");
 	t.is(res.result, 10000);
@@ -48,10 +48,10 @@ test('Tail call in conditional expressions work', async t => {
     f(5000, 5000);
     `;
     const chapter: number = 1;
-	const res = (await compileAndRunTest(code, chapter));
+	  const res = (await compileAndRunTest(code, chapter));
     t.is(res.resultStatus, "finished");
-	t.is(res.result, 10000);
-	t.is(res.errors, null);
+    t.is(res.result, 10000);
+    t.is(res.errors, null);
 });
 
 test('Tail call in boolean operators work', async t => {
@@ -66,10 +66,10 @@ test('Tail call in boolean operators work', async t => {
     f(5000, 5000);
     `;
     const chapter: number = 1;
-	const res = (await compileAndRunTest(code, chapter));
+	  const res = (await compileAndRunTest(code, chapter));
     t.is(res.resultStatus, "finished");
-	t.is(res.result, 10000);
-	t.is(res.errors, null);
+    t.is(res.result, 10000);
+    t.is(res.errors, null);
 });
 
 test('Tail call in nested mix of conditional expressions boolean operators work', async t => {
@@ -80,10 +80,10 @@ test('Tail call in nested mix of conditional expressions boolean operators work'
     f(5000, 5000);
     `;
     const chapter: number = 1;
-	const res = (await compileAndRunTest(code, chapter));
+    const res = (await compileAndRunTest(code, chapter));
     t.is(res.resultStatus, "finished");
-	t.is(res.result, 10000);
-	t.is(res.errors, null);
+    t.is(res.result, 10000);
+    t.is(res.errors, null);
 });
 
 test('Tail calls in arrow functions work', async t => {
@@ -92,10 +92,10 @@ test('Tail calls in arrow functions work', async t => {
     f(5000, 5000);
     `;
     const chapter: number = 1;
-	const res = (await compileAndRunTest(code, chapter));
+    const res = (await compileAndRunTest(code, chapter));
     t.is(res.resultStatus, "finished");
-	t.is(res.result, 10000);
-	t.is(res.errors, null);
+    t.is(res.result, 10000);
+    t.is(res.errors, null);
 });
 
 
@@ -111,10 +111,10 @@ test('Tail calls in arrow block functions work', async t => {
     f(5000, 5000);
     `;
     const chapter: number = 1;
-	const res = (await compileAndRunTest(code, chapter));
+    const res = (await compileAndRunTest(code, chapter));
     t.is(res.resultStatus, "finished");
-	t.is(res.result, 10000);
-	t.is(res.errors, null);
+    t.is(res.result, 10000);
+    t.is(res.errors, null);
 });
 
 test('Tail calls in block functions work', async t => {
@@ -136,10 +136,10 @@ test('Tail calls in block functions work', async t => {
     f(5000, 5000);
     `;
     const chapter: number = 1;
-	const res = (await compileAndRunTest(code, chapter));
+    const res = (await compileAndRunTest(code, chapter));
     t.is(res.resultStatus, "finished");
-	t.is(res.result, 10000);
-	t.is(res.errors, null);
+    t.is(res.result, 10000);
+    t.is(res.errors, null);
 });
 
 test('Tail calls in mutual recursion with arrow functions work', async t => {
@@ -149,10 +149,10 @@ test('Tail calls in mutual recursion with arrow functions work', async t => {
     f(5000, 5000);
     `;
     const chapter: number = 1;
-	const res = (await compileAndRunTest(code, chapter));
+    const res = (await compileAndRunTest(code, chapter));
     t.is(res.resultStatus, "finished");
-	t.is(res.result, 10000);
-	t.is(res.errors, null);
+    t.is(res.result, 10000);
+    t.is(res.errors, null);
 });
 
 test('Tail calls in mixed tail-call/non-tail-call recursion work', async t => {
@@ -167,10 +167,10 @@ test('Tail calls in mixed tail-call/non-tail-call recursion work', async t => {
     f(5000, 5000, 2);
     `;
     const chapter: number = 1;
-	const res = (await compileAndRunTest(code, chapter));
+	  const res = (await compileAndRunTest(code, chapter));
     t.is(res.resultStatus, "finished");
-	t.is(res.result, 15000);
-	t.is(res.errors, null);
+	  t.is(res.result, 15000);
+	  t.is(res.errors, null);
 });
 
 // Make test valid after merging TCO
@@ -182,11 +182,11 @@ test.skip('Tail Call Optimization works', async t => {
     arithmetic_seq(20000, 0);
     `;
     const chapter: number = 1;
-	const res = (await compileAndRunTest(code, chapter));
+	  const res = (await compileAndRunTest(code, chapter));
     t.timeout(10000)
     t.is(res.resultStatus, "finished");
-	t.is(res.result, 200010000);
-	t.is(res.errors, null);
+    t.is(res.result, 200010000);
+    t.is(res.errors, null);
 });
 
 test.todo('Test tail calls with WASM tail call proposal by enabling flags');

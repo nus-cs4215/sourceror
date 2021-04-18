@@ -1,6 +1,7 @@
 node_modules
 *.js
 !*.prelude.js
+!testing/__tests__/browser/*.js
 *.map
 dist/
 .idea/
