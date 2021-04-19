@@ -33,7 +33,15 @@ Source \S 1 WebAssembly is the dialect of Source \S 3 used in Sourceror, an expe
 
 \subsection*{Language}  
 
-All language features of Source \S 3 are supported including support for proper tail calls.
+Most features of Source \S 3 are supported, including the following: 
+\begin{itemize}
+\item variable declaration
+\item variable assignment
+\item array assignment
+\item array access expressions
+\item literal array expressions
+\end{itemize}
+Additionally, Source \S 3 WebAssembly supports proper tail calls.
 
 \subsection*{Error Handling}
 
@@ -66,6 +74,18 @@ Compilation errors produce error messages with line numbers, just like in Source
 \input source_typing.tex
 
 \input source_import_syntax.tex
+
+\section{Standard Libraries}
+
+The following libraries are always available in this language.
+
+Names must be imported explicitly before being used.  The MISC library can be imported as "std/misc" and the MATH library can be imported as "std/math".
+
+For example, \lstinline[language=javascript]!import { get_time } from "std/misc";! will import the \lstinline{get_time()} function.
+
+\input source_misc
+
+\input source_math
 
 \input source_js_differences
 
