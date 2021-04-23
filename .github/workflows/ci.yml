@@ -18,11 +18,11 @@ jobs:
           args: --release --all-features
 
   build_and_test_driver:
-    name: Source Driver 
+    name: Source Driver
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: actions/setup-node@v2
-      with:
-        node-version: '14.x'
-    - run: cd sourceror-driver && yarn install && yarn run build
+      - uses: actions/checkout@master
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "14.x"
+      - run: cd sourceror-driver && yarn install && yarn run build && yarn test

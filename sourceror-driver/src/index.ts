@@ -8,6 +8,7 @@ export { makePlatformImports } from "./platform";
 import { Transcoder } from "./transcoder";
 export { Transcoder };
 import { cachedGetFile } from "./cache";
+import { Constants } from "./constants/constants";
 
 export class CompileError extends Error {
   constructor(message: string) {
@@ -178,29 +179,29 @@ function read_js_result(linear_memory: WebAssembly.Memory): any {
 function stringifySourcerorRuntimeErrorCode(code: number): [string, string] {
   switch (code) {
     case 0x0:
-      return ["General runtime error", ""];
+      return [Constants.RuntimeErrors.GENERAL, ""];
     case 0x1:
       return [
-        "Out of memory",
+        Constants.RuntimeErrors.MEMORY,
         "Strings and objects are allocated on the heap.  You have exhausted the available heap space.  Try recompiling your program with increased heap space.",
       ];
     case 0x10:
-      return ["General runtime type error", ""];
+      return [Constants.RuntimeErrors.TYPE, ""];
     case 0x11:
-      return ["Function called with incorrect parameter type", ""];
+      return [Constants.RuntimeErrors.PARAMETER_TYPE, ""];
     case 0x12:
-      return ["Unary operator called with incorrect parameter type", ""];
+      return [Constants.RuntimeErrors.UNARY_PARAMETER_TYPE, ""];
     case 0x13:
-      return ["Binary operator called with incorrect parameter type", ""];
+      return [Constants.RuntimeErrors.BINARY_PARAMETER_TYPE, ""];
     case 0x16:
-      return ["Function call operator applied on a non-function", ""];
+      return [Constants.RuntimeErrors.NON_FUNCTION, ""];
     case 0x17:
-      return ["If statement has a non-boolean condition", ""];
+      return [Constants.RuntimeErrors.NON_BOOLEAN, ""];
     case 0x1A:
-      return ["Variable used before initialization", ""];
+      return [Constants.RuntimeErrors.VARIABLE_INIT, ""];
     default:
       return [
-        "Unknown runtime error",
+        Constants.RuntimeErrors.UNKNOWN,
         "This is probably a bug in Sourceror; please report it.",
       ];
   }
