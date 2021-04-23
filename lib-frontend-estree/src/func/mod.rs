@@ -22,6 +22,7 @@ pub enum ParseProgramError {
     AttributeParseError,    // attribute string cannot be parsed into a hashmap
     AttributeContentError(&'static str), // some issue with the key or value of an attribute
     AttributeUnrecognizedError(String), // this attribute key is not recognized
+    AssignmentToConstantError(String),
     /*ConstraintTargetError,             // constraint cannot be applied to this type of node
     ConstraintMissingError, // constraint attribute did not come with a value
     ConstraintParseError,   // constraint attribute value cannot be parsed into a hashmap*/
@@ -62,6 +63,9 @@ impl std::fmt::Display for ParseProgramError {
             }
             ParseProgramError::AttributeUnrecognizedError(key) => {
                 write!(f, "Unrecognized attribute `{}'", key)
+            }
+            ParseProgramError::AssignmentToConstantError(varname) => {
+                write!(f, "Cannot assign new value to constant {}", varname)
             }
             ParseProgramError::DirectFunctionCaptureError => write!(
                 f,

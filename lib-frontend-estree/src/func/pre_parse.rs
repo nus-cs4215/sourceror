@@ -19,7 +19,7 @@ use std::collections::HashSet;
  * Pre-parse an ESTree program
  * Decide where every ir local should be declared,
  * and whether they need to be address-taken (i.e. put in the heap).
- * Also detect duplicate variable detection in the same scope; if so, raises an error.
+ * Also detect duplicate variable declaration in the same scope; if so, raises an error.
  *
  * Note: import_ctx contains x elements, where x is the number of imports detected in the dep_graph step, in order;
  * and each element is a hash map from name to the imported prevar (which must be a global, i.e. prevar.depth == 0).
@@ -66,7 +66,6 @@ pub fn pre_parse_program(
     es_program.direct_funcs = direct_funcs;
 
     name_ctx.remove_scope(undo_ctx);
-
     Ok(exports)
 }
 
@@ -74,7 +73,7 @@ pub fn pre_parse_program(
  * Pre-parse an ESTree node block content
  * Decide where every ir local should be declared,
  * and whether they need to be address-taken (i.e. put in the heap).
- * Also detect duplicate variable detection in the same scope; if so, raises an error.
+ * Also detect duplicate variable declaration in the same scope; if so, raises an error.
  *
  * name_ctx may be modified, but must be returned to its original state before the function returns (this allows the frontend to have good time complexity guarantees).
  */
@@ -217,6 +216,50 @@ fn pre_parse_function<F: Function + Scope>(
     *es_func.captured_vars_mut() = clone_varusages(&ret_usages);
 
     Ok(varusage::wrap_closure(ret_usages))
+}
+
+fn pre_parse_assign_expr(
+    es_assign_expr: &mut AssignmentExpression,
+    _loc: &Option<esSL>,
+    name_ctx: &mut HashMap<String, PreVar>,
+    depth: usize,
+    filename: Option<&str>,
+) -> Result<BTreeMap<VarLocId, Usage>, CompileMessage<ParseProgramError>> {
+    // check that it is '='.
+    if es_assign_expr.operator != "=" {
+        return Err(CompileMessage::new_error(
+            _loc.into_sl(filename).to_owned(),
+            ParseProgramError::SourceRestrictionAssignmentOperatorError(
+                es_assign_expr.operator.to_string(),
+            ),
+        ));
+    }
+    if let Node {
+        loc: _,
+        kind: NodeKind::Identifier(Identifier { name, prevar }),
+    } = &mut *es_assign_expr.left
+    {
+        let rhs_expr = pre_parse_expr(&mut *es_assign_expr.right, name_ctx, depth, filename)?;
+        let resvar = *name_ctx.get(name.as_str()).unwrap();
+        *prevar = Some(resvar);
+        let varlocid = match resvar {
+            PreVar::Target(varlocid) => varlocid,
+            PreVar::Direct => panic!("ICE: Should be VarLocId"),
+        };
+        if varlocid.depth == 0 {
+            Ok(rhs_expr)
+        } else {
+            Ok(varusage::merge_series(
+                rhs_expr,
+                varusage::from_modified(varlocid),
+            ))
+        }
+    } else {
+        Err(CompileMessage::new_error(
+            _loc.into_sl(filename).to_owned(),
+            ParseProgramError::ESTreeError("Expected ESTree Identifier here"),
+        ))
+    }
 }
 
 fn split_off_address_taken_vars(
@@ -399,6 +442,9 @@ fn pre_parse_expr_statement(
                 } => {
                     let rhs_expr = pre_parse_expr(&mut **right, name_ctx, depth, filename)?;
                     let resvar = *name_ctx.get(name.as_str()).unwrap();
+                    *prevar = Some(resvar);
+                    // println!("{:#?}", *prevar);
+                    // println!("{:#?}", resvar);
                     assert!(*prevar == Some(resvar)); // they should already have a prevar attached
                                                       // note: this is probably a bug, they would not have prevar attached yet...
                     let varlocid = match resvar {
@@ -912,6 +958,8 @@ fn validate_and_extract_decls(
 ) -> Result<Vec<(String, PreVar)>, CompileMessage<ParseProgramError>> {
     let mut var_ctx: ProgramPreExports = VarCtx::new();
     let mut ret: Vec<(String, PreVar)> = Vec::new();
+    let mut const_vars: HashSet<String> = HashSet::new();
+
     es_block_body.each_with_attributes(filename, |es_node, attr| match es_node {
         Node {
             loc,
@@ -938,6 +986,7 @@ fn validate_and_extract_decls(
             depth,
             start_idx,
             filename,
+            &mut const_vars,
         ),
         _ => Ok(()),
     })?;
@@ -964,6 +1013,8 @@ fn validate_and_extract_imports_and_decls(
     let mut ret: Vec<(String, PreVar)> = Vec::new();
     let mut exports: ProgramPreExports = ProgramPreExports::new();
     let mut import_decl_idx = 0;
+    let mut const_vars: HashSet<String> = HashSet::new();
+
     es_program_body.each_with_attributes(filename, |es_node, attr| match es_node {
         Node {
             loc,
@@ -990,6 +1041,21 @@ fn validate_and_extract_imports_and_decls(
             0,
             start_idx,
             filename,
+            &mut const_vars,
+        ),
+        Node {
+            loc,
+            kind: NodeKind::ExpressionStatement(expr_stmt),
+        } => process_expr_stmt_validation(
+            &mut var_ctx,
+            &mut ret,
+            expr_stmt,
+            loc,
+            attr,
+            0,
+            start_idx,
+            filename,
+            &mut const_vars,
         ),
         Node {
             loc,
@@ -1057,6 +1123,7 @@ fn process_var_decl_validation(
     depth: usize,
     start_idx: &mut usize,
     filename: Option<&str>,
+    const_vars: &mut HashSet<String>,
 ) -> Result<(), CompileMessage<ParseProgramError>> {
     if attr.contains_key("direct") {
         Err(CompileMessage::new_error(
@@ -1075,6 +1142,9 @@ fn process_var_decl_validation(
                 let (name, varlocid) =
                     try_coalesce_id_target(var_ctx, &*var_decr.id, depth, start_idx, filename)?;
                 out.push((name.to_owned(), PreVar::Target(varlocid)));
+                if var_decl.kind == "const" {
+                    const_vars.insert(name.to_owned());
+                }
             } else {
                 return Err(CompileMessage::new_error(
                     loc.into_sl(filename).to_owned(),
@@ -1086,6 +1156,39 @@ fn process_var_decl_validation(
         }
         Ok(())
     }
+}
+
+fn process_expr_stmt_validation(
+    var_ctx: &mut ProgramPreExports,
+    out: &mut Vec<(String, PreVar)>,
+    expr_stmt: &ExpressionStatement,
+    _loc: &Option<esSL>,
+    _attr: HashMap<String, Option<String>>,
+    depth: usize,
+    start_idx: &mut usize,
+    filename: Option<&str>,
+    const_vars: &mut HashSet<String>,
+) -> Result<(), CompileMessage<ParseProgramError>> {
+    if let Node {
+        loc: _,
+        kind: NodeKind::AssignmentExpression(assign_expr),
+    } = &*expr_stmt.expression
+    {
+        if let Node {
+            loc,
+            kind: NodeKind::Identifier(es_id),
+        } = &*assign_expr.left
+        {
+            try_coalesce_id_target(var_ctx, &*assign_expr.left, depth, start_idx, filename);
+            if const_vars.contains(es_id.name.as_str()) {
+                return Err(CompileMessage::new_error(
+                    loc.into_sl(filename).to_owned(),
+                    ParseProgramError::AssignmentToConstantError(es_id.name.as_str().to_owned()),
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn try_coalesce_id_target<'a>(

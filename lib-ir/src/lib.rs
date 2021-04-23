@@ -77,6 +77,12 @@ impl VarType {
 }
 pub const NUM_PRIMITIVE_TAG_TYPES: usize = 6; // does not include Any
 
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
+pub enum VarKind {
+    Const,
+    Let,
+}
+
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub struct Import {
     pub module_name: String,

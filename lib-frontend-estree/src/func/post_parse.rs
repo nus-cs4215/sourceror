@@ -1121,7 +1121,7 @@ fn post_parse_toplevel_export_decl(
 
 fn post_parse_expr_statement(
     es_expr_stmt: ExpressionStatement,
-    loc: Option<esSL>,
+    _loc: Option<esSL>,
     parse_ctx: &mut ParseState,
     depth: usize,
     num_locals: usize, // current number of IR locals
@@ -1131,7 +1131,6 @@ fn post_parse_expr_statement(
     // We don't need to detect AssignmentExpression separately here...
     // We just treat it as an expression that returns undefined.
     // pre_parse() would have already ensured that there are no nested AssignmentExpressions.
-
     post_parse_expr(
         *es_expr_stmt.expression,
         parse_ctx,
@@ -1869,7 +1868,8 @@ fn post_parse_assign_expr(
             ParseProgramError::SourceRestrictionAssignmentOperatorError(es_assign_expr.operator),
         ));
     }
-    // an assignment expr, that returns undefined
+    // an assignment expr, that returns undefined (they dont have return values)
+    // undefined is like () in Rust
     let varlocid = as_varlocid(as_id(*es_assign_expr.left).prevar.unwrap());
     Ok(ir::Expr {
         vartype: Some(ir::VarType::Undefined),
@@ -1889,7 +1889,7 @@ fn post_parse_assign_expr(
 
 fn post_parse_cond_expr(
     es_cond_expr: ConditionalExpression,
-    loc: Option<esSL>,
+    _loc: Option<esSL>,
     parse_ctx: &mut ParseState,
     depth: usize,
     num_locals: usize, // current number of IR locals
