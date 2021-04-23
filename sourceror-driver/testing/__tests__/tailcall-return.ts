@@ -4,7 +4,7 @@ import { stripIndent } from "../utils/formatters"
 
 // TODO: remove after TCO 
 test('Check that stack is at most 10k in size', async t => {
-	const code: string = stripIndent`
+	  const code: string = stripIndent`
     function f(x) {
       if (x <= 0) {
         return 0;
@@ -55,7 +55,7 @@ test('Tail call in conditional expressions work', async t => {
 });
 
 test('Tail call in boolean operators work', async t => {
-	const code: string = stripIndent`
+	  const code: string = stripIndent`
     function f(x, y) {
       if (x <= 0) {
         return y;
@@ -73,7 +73,7 @@ test('Tail call in boolean operators work', async t => {
 });
 
 test('Tail call in nested mix of conditional expressions boolean operators work', async t => {
-	const code: string = stripIndent`
+	  const code: string = stripIndent`
     function f(x, y) {
       return x <= 0 ? y : false || x > 0 ? f(x-1, y+1) : 'unreachable';
     }
@@ -87,7 +87,7 @@ test('Tail call in nested mix of conditional expressions boolean operators work'
 });
 
 test('Tail calls in arrow functions work', async t => {
-	const code: string = stripIndent`
+	  const code: string = stripIndent`
     const f = (x, y) => x <= 0 ? y : f(x-1, y+1);
     f(5000, 5000);
     `;
@@ -100,7 +100,7 @@ test('Tail calls in arrow functions work', async t => {
 
 
 test('Tail calls in arrow block functions work', async t => {
-	const code: string = stripIndent`
+	  const code: string = stripIndent`
     const f = (x, y) => {
       if (x <= 0) {
         return y;
@@ -118,7 +118,7 @@ test('Tail calls in arrow block functions work', async t => {
 });
 
 test('Tail calls in block functions work', async t => {
-	const code: string = stripIndent`
+	  const code: string = stripIndent`
     function f(x, y) {
       if (x <= 0) {
         return y;
@@ -143,7 +143,7 @@ test('Tail calls in block functions work', async t => {
 });
 
 test('Tail calls in mutual recursion with arrow functions work', async t => {
-	const code: string =  stripIndent`
+	  const code: string =  stripIndent`
     const f = (x, y) => x <= 0 ? y : g(x-1, y+1);
     const g = (x, y) => x <= 0 ? y : f(x-1, y+1);
     f(5000, 5000);
@@ -156,7 +156,7 @@ test('Tail calls in mutual recursion with arrow functions work', async t => {
 });
 
 test('Tail calls in mixed tail-call/non-tail-call recursion work', async t => {
-	const code: string =  stripIndent`
+	  const code: string =  stripIndent`
     function f(x, y, z) {
       if (x <= 0) {
         return y;
@@ -175,7 +175,7 @@ test('Tail calls in mixed tail-call/non-tail-call recursion work', async t => {
 
 // Make test valid after merging TCO
 test.skip('Tail Call Optimization works', async t => {
-	const code: string =  stripIndent`
+	  const code: string =  stripIndent`
     function arithmetic_sum(number, total) {
         return number === 0 ? total : arithmetic_seq(number - 1, total + number);
     }

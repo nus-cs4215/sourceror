@@ -14,7 +14,7 @@ test('standalone block statements: result', async t => {
     }
     test();
     `;
-    const chapter: number = 1;
+  const chapter: number = 1;
 	const res = (await compileAndRunTest(code, chapter));
   t.is(res.resultStatus, "finished");
 	t.is(res.result, true);
@@ -35,7 +35,7 @@ test('const uses block scoping instead of function scoping', async t => {
     }
     test();
   `;
-    const chapter: number = 1;
+  const chapter: number = 1;
 	const res = (await compileAndRunTest(code, chapter));
   t.is(res.resultStatus, "finished");
 	t.is(res.result, true);
@@ -52,7 +52,7 @@ test('Error when accessing temporal dead zone', async t => {
     }
     f();
     `;
-    const chapter: number = 1;
+  const chapter: number = 1;
 	const res = (await compileAndRunTest(code, chapter));
   t.timeout(30000);
   t.is(res.resultStatus, "error");
@@ -68,7 +68,7 @@ test('In a block, every going-to-be-defined variable in the block cannot be acce
       const a = 10;
     }
     `;
-    const chapter: number = 1;
+  const chapter: number = 1;
 	const res = (await compileAndRunTest(code, chapter));
   t.timeout(30000);
   t.is(res.resultStatus, "error");
@@ -90,7 +90,7 @@ test.skip('let uses block scoping instead of function scoping', async t => {
     }
     test();
   `;
-    const chapter: number = 3;
+  const chapter: number = 3;
 	const res = (await compileAndRunTest(code, chapter));
 	t.is(res.result, true);
 	t.is(res.errors, null);
@@ -108,7 +108,7 @@ test.skip('for loops use block scoping instead of function scoping', async t => 
     }
     test();
   `;
-    const chapter: number = 3;
+  const chapter: number = 3;
 	const res = (await compileAndRunTest(code, chapter));
 	t.is(res.result, true);
 	t.is(res.errors, null);
@@ -128,7 +128,7 @@ test.skip('while loops use block scoping instead of function scoping', async t =
     }
     test();
   `;
-    const chapter: number = 4;
+  const chapter: number = 4;
 	const res = (await compileAndRunTest(code, chapter));
 	t.is(res.result, true);
 	t.is(res.errors, null);
