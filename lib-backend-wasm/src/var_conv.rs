@@ -643,7 +643,7 @@ pub fn encode_unchecked_local_conv_any_narrowing(
     wasm_source_localidx: wasmgen::LocalIdx,
     wasm_dest_localidx: &[wasmgen::LocalIdx],
     ir_dest_vartype: ir::VarType,
-    scratch: &mut Scratch,
+    _scratch: &mut Scratch,
     expr_builder: &mut wasmgen::ExprBuilder,
 ) {
     match ir_dest_vartype {

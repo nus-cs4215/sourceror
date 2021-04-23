@@ -356,8 +356,14 @@ fn post_parse_scope<S: Scope, PE: ScopePrefixEmitter>(
         }
     }
     // the extra undefined below ensures that the sequence returns undefined
-    // todo! IR should remove this Expr if the last stmt already returns undefined, so that we can ensure tail call in certain situations.
-    sequence.push(make_prim_undefined());
+    // only push undefined if last stmt does not return undefined
+    let ir::Expr {
+        vartype: v,
+        kind: _,
+    } = sequence.last().cloned().unwrap();
+    if v != Some(ir::VarType::Undefined) {
+        sequence.push(make_prim_undefined());
+    }
 
     let sequence_expr = ir::Expr {
         vartype: Some(ir::VarType::Undefined),
@@ -849,6 +855,7 @@ fn post_parse_function<Func: Function>(
         result: Some(ir::VarType::Any),
         expr: ir_func_body,
         signature_filter: Default::default(),
+        tail_call: true,
     });
 
     // add the primfunc expr that will be returned (since it's the last item in the sequence)
@@ -1139,6 +1146,7 @@ fn post_parse_expr_statement(
         num_locals,
         filename,
         ir_program,
+        false,
     )
 }
 
@@ -1163,6 +1171,7 @@ fn post_parse_return_statement(
                 num_locals,
                 filename,
                 ir_program,
+                true,
             )?),
         },
     })
@@ -1198,6 +1207,7 @@ fn post_parse_if_statement(
                         num_locals,
                         filename,
                         ir_program,
+                        false,
                     )?),
                     expected: ir::VarType::Boolean,
                     create_narrow_local: true,
@@ -1381,7 +1391,7 @@ fn post_parse_var_decr_recurse<
         varlocid,
         move |parse_ctx, depth, num_locals, filename, ir_program| {
             post_parse_expr(
-                init_expr, parse_ctx, depth, num_locals, filename, ir_program,
+                init_expr, parse_ctx, depth, num_locals, filename, ir_program, false,
             )
         },
         (more_var_decr_iter, more_stmt_attr_iter),
@@ -1539,6 +1549,7 @@ fn post_parse_toplevel_var_decl(
                 0,
                 filename,
                 ir_program,
+                false,
             )?;
             Ok(ir::Expr {
                 vartype: Some(ir::VarType::Undefined),
@@ -1576,6 +1587,7 @@ fn post_parse_expr(
     num_locals: usize, // current number of IR locals
     filename: Option<&str>,
     ir_program: &mut ir::Program,
+    tail_call: bool,
 ) -> Result<ir::Expr, CompileMessage<ParseProgramError>> {
     match es_expr.kind {
         NodeKind::Identifier(es_id) => post_parse_varname(
@@ -1649,6 +1661,7 @@ fn post_parse_expr(
             num_locals,
             filename,
             ir_program,
+            tail_call,
         ),
         NodeKind::CallExpression(call_expr) => post_parse_call_expr(
             call_expr,
@@ -1658,6 +1671,7 @@ fn post_parse_expr(
             num_locals,
             filename,
             ir_program,
+            tail_call,
         ),
         _ => pppanic(),
     }
@@ -1882,6 +1896,7 @@ fn post_parse_assign_expr(
                 num_locals,
                 filename,
                 ir_program,
+                false,
             )?),
         },
     })
@@ -1895,6 +1910,7 @@ fn post_parse_cond_expr(
     num_locals: usize, // current number of IR locals
     filename: Option<&str>,
     ir_program: &mut ir::Program,
+    tail_call: bool,
 ) -> Result<ir::Expr, CompileMessage<ParseProgramError>> {
     // see post_parse_if_statement() for comparison
     // Emits the ExprKind::Conditional.
@@ -1917,6 +1933,7 @@ fn post_parse_cond_expr(
                         num_locals,
                         filename,
                         ir_program,
+                        tail_call,
                     )?),
                     expected: ir::VarType::Boolean,
                     create_narrow_local: true,
@@ -1945,6 +1962,7 @@ fn post_parse_cond_expr(
                 num_locals,
                 filename,
                 ir_program,
+                tail_call,
             )?),
             false_expr: Box::new(post_parse_expr(
                 *es_cond_expr.alternate,
@@ -1953,6 +1971,7 @@ fn post_parse_cond_expr(
                 num_locals,
                 filename,
                 ir_program,
+                tail_call,
             )?),
         },
     })
@@ -1966,6 +1985,7 @@ fn post_parse_call_expr(
     num_locals: usize, // current number of IR locals
     filename: Option<&str>,
     ir_program: &mut ir::Program,
+    tail_call: bool,
 ) -> Result<ir::Expr, CompileMessage<ParseProgramError>> {
     // We do not need to differentiate between direct and indirect calls,
     // the IR knows how to do the optimisation.
@@ -1983,6 +2003,7 @@ fn post_parse_call_expr(
         num_locals,
         filename,
         ir_program,
+        tail_call,
     )?;
     let func = ir::Expr {
         vartype: Some(ir::VarType::Func),
@@ -2017,6 +2038,7 @@ fn post_parse_call_expr(
         num_locals,
         filename,
         ir_program,
+        tail_call,
     )
 }
 
@@ -2029,9 +2051,14 @@ fn post_parse_call_func_with_params_helper(
     num_locals: usize, // current number of IR locals
     filename: Option<&str>,
     ir_program: &mut ir::Program,
+    tail_call: bool,
 ) -> Result<ir::Expr, CompileMessage<ParseProgramError>> {
     let args: Box<[ir::Expr]> = args_iter
-        .map(|arg| post_parse_expr(arg, parse_ctx, depth, num_locals, filename, ir_program))
+        .map(|arg| {
+            post_parse_expr(
+                arg, parse_ctx, depth, num_locals, filename, ir_program, tail_call,
+            )
+        })
         .collect::<Result<Box<[ir::Expr]>, CompileMessage<ParseProgramError>>>()?;
     Ok(ir::Expr {
         vartype: Some(ir::VarType::Any),
@@ -2039,6 +2066,7 @@ fn post_parse_call_func_with_params_helper(
             func: Box::new(func_expr),
             args: args,
             location: as_ir_sl(&loc, 0 /*FILE*/),
+            tail_call: tail_call,
         },
     })
 }
@@ -2069,6 +2097,7 @@ fn post_parse_direct_call_helper(
         num_locals,
         filename,
         ir_program,
+        false,
     )
 }
 

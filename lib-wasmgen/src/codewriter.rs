@@ -1,5 +1,6 @@
 /**
  * Structs and implementations for encoding instructions in an expression.
+ * Refer to the webassembly specification for details: https://webassembly.github.io/spec/core/_download/WebAssembly.pdf
  */
 use super::*;
 use projstd::iter::SequentialCountAdapter;
@@ -745,7 +746,7 @@ impl ExprBuilder {
         self.append_opcode(OpCode::MemoryGrow);
         memidx.wasm_serialize(&mut self.bytecode);
     }
-    pub fn memory_init(&mut self, memidx: MemIdx) {
+    pub fn memory_init(&mut self, _memidx: MemIdx) {
         unimplemented!();
     }
     pub fn data_drop(&mut self) {

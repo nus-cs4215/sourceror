@@ -139,7 +139,11 @@ pub fn encode_funcs<'a, Heap: HeapManager>(
                     encode_param_list(&ir_func.params);
                 let wasm_functype = wasmgen::FuncType::new(
                     wasm_param_valtypes,
-                    encode_result(ir_func.result, options.wasm_multi_value),
+                    if ir_func.tail_call {
+                        encode_result(Some(ir::VarType::String), options.wasm_multi_value)
+                    } else {
+                        encode_result(ir_func.result, options.wasm_multi_value)
+                    },
                 );
                 let (_, wasm_funcidx) = wasm_module.register_func(&wasm_functype);
                 let code_builder = wasmgen::CodeBuilder::new(wasm_functype);
@@ -176,7 +180,11 @@ pub fn encode_funcs<'a, Heap: HeapManager>(
                     wasmgen::ValType::I32,
                     wasmgen::ValType::I32,
                 ]),
-                encode_result(Some(ir::VarType::Any), options.wasm_multi_value),
+                if options.wasm_tail_call {
+                    encode_result(Some(ir::VarType::Any), options.wasm_multi_value)
+                } else {
+                    encode_result(Some(ir::VarType::String), options.wasm_multi_value)
+                },
             );
             let (_, wasm_funcidx) = wasm_module.register_func(&wasm_functype);
             let mut code_builder = wasmgen::CodeBuilder::new(wasm_functype);
@@ -763,8 +771,8 @@ fn encode_expr<H: HeapManager>(
             func,
             args,
             location,
+            tail_call,
         } => {
-            // encodes an indirect function call
             encode_appl(
                 expr.vartype,
                 func,
@@ -773,12 +781,25 @@ fn encode_expr<H: HeapManager>(
                 ctx,
                 mutctx,
                 expr_builder,
+                *tail_call,
             );
             true
         }
-        ir::ExprKind::DirectAppl { funcidx, args } => {
+        ir::ExprKind::DirectAppl {
+            funcidx,
+            args,
+            tail_call,
+        } => {
             // encodes a function call
-            encode_direct_appl(expr.vartype, *funcidx, args, ctx, mutctx, expr_builder);
+            encode_direct_appl(
+                expr.vartype,
+                *funcidx,
+                args,
+                ctx,
+                mutctx,
+                expr_builder,
+                *tail_call,
+            );
             true
         }
         ir::ExprKind::Conditional {
@@ -894,22 +915,21 @@ fn encode_expr<H: HeapManager>(
             // - the return type is at least as wide as the inner expr type
             match inner_expr.vartype {
                 None => panic!("ICE: IR->Wasm: expression in return statement cannot be Void"),
-                Some(inner_type) => {
+                Some(_inner_type) => {
                     match ctx.return_type {
                         None => panic!("ICE: IR->Wasm: cannot have return expression in a function that returns Void"),
-                        Some(ret_type) => {
+                        Some(_ret_type) => {
                             // net wasm stack: [] -> [<expr.vartype>]
                             encode_expr(inner_expr, ctx, mutctx, expr_builder);
-
-                            // net wasm stack: [<expr.vartype>] -> [<return_calling_conv(ctx.return_type.unwrap())>]
                             encode_return_calling_conv(
-                                ret_type,
-                                inner_type,
+                                ir::VarType::Any,
+                                ir::VarType::Any,
                                 ctx.options.wasm_multi_value,
                                 ctx.stackptr,
                                 mutctx.scratch_mut(),
                                 expr_builder,
                             );
+                            encode_load_dummies(&[wasmgen::ValType::I32], expr_builder);
                             // return the value on the stack (or in the unprotected stack) (which now has the correct type)
                             expr_builder.return_();
                         }
@@ -1245,6 +1265,7 @@ fn encode_appl<H: HeapManager>(
     ctx: EncodeContext<H>,
     mutctx: &mut MutContext,
     expr_builder: &mut wasmgen::ExprBuilder,
+    tail_call: bool,
 ) {
     // An Appl (indirect call) should be encoded using the uniform calling convention, placing actual arguments onto the unprotected stack.
 
@@ -1282,25 +1303,26 @@ fn encode_appl<H: HeapManager>(
             ctx,
             mutctx,
             expr_builder,
+            tail_call,
         );
 
-        // encode the proper caller id (which is the memory location of the SourceLocation)
-        // net wasm stack: [] -> [i32(callerid)]
-        expr_builder.i32_const(*ctx.appl_data_encoder.get(location).unwrap() as i32);
+        // check tail call flags
+        if ctx.options.wasm_tail_call || !tail_call {
+            // encode the proper caller id (which is the memory location of the SourceLocation)
+            // net wasm stack: [] -> [i32(callerid)]
+            expr_builder.i32_const(*ctx.appl_data_encoder.get(location).unwrap() as i32);
 
-        // push the tableidx onto the stack
-        // net wasm stack: [] -> [tableidx]
-        expr_builder.local_get(mutctx.wasm_local_slice(localidx_func)[0]);
+            // push the tableidx onto the stack
+            // net wasm stack: [] -> [tableidx]
+            expr_builder.local_get(mutctx.wasm_local_slice(localidx_func)[0]);
 
-        // todo!(For optimisation, heap_encode_prologue_epilogue should only be called if the callee might allocate)
-        // Note: encode_args_to_call_function should be *before* encode_local_roots_prologue, since the args themselves might make function calls.
-        if true {
-            // This function might allocate memory, so we need to store the locals in the gc_roots stack first.
-
-            // call the function with gc prologue and epilogue
-            mutctx.heap_encode_prologue_epilogue(ctx.heap, expr_builder, |mutctx, expr_builder| {
-                // call the function (indirectly, using uniform calling convention)
-                expr_builder.call_indirect(
+            // todo!(For optimisation, heap_encode_prologue_epilogue should only be called if the callee might allocate)
+            // Note: encode_args_to_call_function should be *before* encode_local_roots_prologue, since the args themselves might make function calls.
+            if ctx.options.wasm_tail_call && tail_call {
+                // Use WTCP
+                // This function might allocate memory, so we need to store the locals in the gc_roots stack first.
+                // call the function with gc prologue and epilogue
+                return expr_builder.return_call_indirect(
                     mutctx
                         .module_wrapper()
                         .add_wasm_type(wasmgen::FuncType::new(
@@ -1313,34 +1335,213 @@ fn encode_appl<H: HeapManager>(
                         )),
                     wasmgen::TableIdx { idx: 0 },
                 );
-            });
-        } else {
-            // This function is guaranteed not to allocate memory, so we don't need to put the locals on the gc_roots stack.
+            }
+            if !tail_call {
+                // This function is guaranteed not to allocate memory, so we don't need to put the locals on the gc_roots stack.
+                // call the function (indirectly)
+                mutctx.heap_encode_prologue_epilogue(
+                    ctx.heap,
+                    expr_builder,
+                    |mutctx, expr_builder| {
+                        // call the function (indirectly, using uniform calling convention)
+                        expr_builder.call_indirect(
+                            mutctx
+                                .module_wrapper()
+                                .add_wasm_type(wasmgen::FuncType::new(
+                                    Box::new([
+                                        wasmgen::ValType::I32,
+                                        wasmgen::ValType::I32,
+                                        wasmgen::ValType::I32,
+                                    ]),
+                                    encode_result(
+                                        Some(ir::VarType::String),
+                                        ctx.options.wasm_multi_value,
+                                    ),
+                                )),
+                            wasmgen::TableIdx { idx: 0 },
+                        );
+                    },
+                );
+            }
 
-            // call the function (indirectly)
-            expr_builder.call_indirect(
-                mutctx
-                    .module_wrapper()
-                    .add_wasm_type(wasmgen::FuncType::new(
-                        Box::new([
-                            wasmgen::ValType::I32,
-                            wasmgen::ValType::I32,
-                            wasmgen::ValType::I32,
-                        ]),
-                        encode_result(Some(ir::VarType::Any), ctx.options.wasm_multi_value),
-                    )),
-                wasmgen::TableIdx { idx: 0 },
-            );
+            if ctx.options.wasm_tail_call {
+                // fetch return values from the location prescribed by the calling convention back to the stack
+                encode_post_appl_calling_conv(
+                    Some(ir::VarType::Any),
+                    ctx.options.wasm_multi_value,
+                    ctx.stackptr,
+                    mutctx.scratch_mut(),
+                    expr_builder,
+                );
+            }
+
+            if !ctx.options.wasm_tail_call && !tail_call {
+                mutctx.with_unused_landing(|mutctx| {
+                    multi_value_polyfill::if_with_opt_else(
+                        encode_opt_vartype(return_type),
+                        ctx.options.wasm_multi_value,
+                        mutctx,
+                        expr_builder,
+                        |mutctx, expr_builder| {
+                            // encode tail call
+                            let loops: &[u32] = &[12, 8, 4, 0];
+                            mutctx.with_scratch_i32(|mutctx, stackptr_localidx| {
+                                expr_builder.global_get(ctx.stackptr);
+                                expr_builder.i32_const(16);
+                                expr_builder.i32_sub();
+                                expr_builder.local_set(stackptr_localidx);
+
+                                for size in loops {
+                                    expr_builder.local_get(stackptr_localidx);
+                                    encode_load_memory(
+                                        *size,
+                                        ir::VarType::String,
+                                        ir::VarType::String,
+                                        mutctx.scratch_mut(),
+                                        expr_builder,
+                                    );
+                                }
+                            });
+
+                            mutctx.heap_encode_prologue_epilogue(
+                                ctx.heap,
+                                expr_builder,
+                                |mutctx, expr_builder| {
+                                    expr_builder.call_indirect(
+                                        mutctx.module_wrapper().add_wasm_type(
+                                            wasmgen::FuncType::new(
+                                                Box::new([
+                                                    wasmgen::ValType::I32,
+                                                    wasmgen::ValType::I32,
+                                                    wasmgen::ValType::I32,
+                                                ]),
+                                                encode_result(
+                                                    Some(ir::VarType::String),
+                                                    ctx.options.wasm_multi_value,
+                                                ),
+                                            ),
+                                        ),
+                                        wasmgen::TableIdx { idx: 0 },
+                                    );
+                                },
+                            );
+
+                            // test the condition
+                            expr_builder.if_(&[]);
+                            expr_builder.loop_(&[]);
+
+                            // check for i32 tag
+                            // tail_call == false -> reached the end
+                            // encode tail call again
+                            mutctx.with_scratch_i32(|mutctx, stackptr_localidx| {
+                                expr_builder.global_get(ctx.stackptr);
+                                expr_builder.i32_const(16);
+                                expr_builder.i32_sub();
+                                expr_builder.local_set(stackptr_localidx);
+
+                                for size in loops {
+                                    expr_builder.local_get(stackptr_localidx);
+                                    encode_load_memory(
+                                        *size,
+                                        ir::VarType::String,
+                                        ir::VarType::String,
+                                        mutctx.scratch_mut(),
+                                        expr_builder,
+                                    );
+                                }
+                            });
+
+                            mutctx.heap_encode_prologue_epilogue(
+                                ctx.heap,
+                                expr_builder,
+                                |mutctx, expr_builder| {
+                                    expr_builder.call_indirect(
+                                        mutctx.module_wrapper().add_wasm_type(
+                                            wasmgen::FuncType::new(
+                                                Box::new([
+                                                    wasmgen::ValType::I32,
+                                                    wasmgen::ValType::I32,
+                                                    wasmgen::ValType::I32,
+                                                ]),
+                                                encode_result(
+                                                    Some(ir::VarType::String),
+                                                    ctx.options.wasm_multi_value,
+                                                ),
+                                            ),
+                                        ),
+                                        wasmgen::TableIdx { idx: 0 },
+                                    );
+                                },
+                            );
+                            expr_builder.br_if(0);
+                            expr_builder.end();
+                            expr_builder.end();
+                            // end of all things
+                            encode_post_appl_calling_conv(
+                                Some(ir::VarType::Any),
+                                ctx.options.wasm_multi_value,
+                                ctx.stackptr,
+                                mutctx.scratch_mut(),
+                                expr_builder,
+                            );
+                        },
+                        Some(
+                            |mutctx: &mut MutContext, expr_builder: &mut wasmgen::ExprBuilder| {
+                                encode_post_appl_calling_conv(
+                                    Some(ir::VarType::Any),
+                                    ctx.options.wasm_multi_value,
+                                    ctx.stackptr,
+                                    mutctx.scratch_mut(),
+                                    expr_builder,
+                                );
+                            },
+                        ),
+                    );
+                });
+            }
         }
+        if !ctx.options.wasm_tail_call && tail_call {
+            mutctx.with_scratch_i32(|mutctx, stackptr_localidx| {
+                // load stackptr
+                // net wasm stack: [] -> [i32(stackptr)]
+                expr_builder.global_get(ctx.stackptr);
+                expr_builder.i32_const(16);
+                expr_builder.i32_sub();
 
-        // fetch return values from the location prescribed by the calling convention back to the stack
-        encode_post_appl_calling_conv(
-            Some(ir::VarType::Any),
-            ctx.options.wasm_multi_value,
-            ctx.stackptr,
-            mutctx.scratch_mut(),
-            expr_builder,
-        );
+                // net wasm stack: [stackptr] -> [stackptr]
+                expr_builder.local_tee(stackptr_localidx);
+
+                // encode the proper caller id (which is the memory location of the SourceLocation)
+                // net wasm stack: [] -> [i32(callerid)]
+                expr_builder.i32_const(*ctx.appl_data_encoder.get(location).unwrap() as i32);
+                encode_store_memory(
+                    size_in_memory(ir::VarType::String),
+                    ir::VarType::String,
+                    ir::VarType::String,
+                    mutctx.scratch_mut(),
+                    expr_builder,
+                );
+
+                // net wasm stack: [] -> [stackptr]
+                expr_builder.local_get(stackptr_localidx);
+
+                // push the tableidx onto the stack
+                // net wasm stack: [] -> [tableidx]
+                expr_builder.local_get(mutctx.wasm_local_slice(localidx_func)[0]);
+                encode_store_memory(
+                    0,
+                    ir::VarType::String,
+                    ir::VarType::String,
+                    mutctx.scratch_mut(),
+                    expr_builder,
+                );
+            });
+            // tagging the tail call
+            // net wasm stack: [] -> [tail_call]
+            // return it
+            expr_builder.i32_const(tail_call as i32);
+            expr_builder.return_();
+        }
     });
 }
 
@@ -1355,6 +1556,7 @@ fn encode_direct_appl<H: HeapManager>(
     ctx: EncodeContext<H>,
     mutctx: &mut MutContext,
     expr_builder: &mut wasmgen::ExprBuilder,
+    tail_call: bool,
 ) {
     // Assert that this funcidx exists
     assert!(funcidx < ctx.ir_signature_list.len(), "invalid funcidx");
@@ -1369,7 +1571,7 @@ fn encode_direct_appl<H: HeapManager>(
 
     // todo!(For optimisation, heap_encode_prologue_epilogue should only be called if the callee might allocate)
     // Note: encode_args_to_call_function should be *before* encode_local_roots_prologue, since the args themselves might make function calls.
-    if true {
+    if ctx.options.wasm_tail_call || !tail_call {
         // This function might allocate memory, so we need to store the locals in the gc_roots stack first.
 
         // call the function with gc prologue and epilogue
@@ -1378,10 +1580,11 @@ fn encode_direct_appl<H: HeapManager>(
             expr_builder.call(ctx.wasm_funcidxs[funcidx]);
         });
     } else {
+        // Use WTCP
         // This function is guaranteed not to allocate memory, so we don't need to put the locals on the gc_roots stack.
 
         // call the function
-        expr_builder.call(ctx.wasm_funcidxs[funcidx]);
+        expr_builder.return_call(ctx.wasm_funcidxs[funcidx]);
     }
 
     // fetch return values from the location prescribed by the calling convention back to the stack
@@ -1442,6 +1645,7 @@ fn encode_args_to_call_indirect_function<H: HeapManager>(
     ctx: EncodeContext<H>,
     mutctx: &mut MutContext,
     expr_builder: &mut wasmgen::ExprBuilder,
+    tail_call: bool,
 ) {
     // encode the args
     // (we do some things that only work when there is at least one arg)
@@ -1449,7 +1653,7 @@ fn encode_args_to_call_indirect_function<H: HeapManager>(
         // load the adjusted stackptr
         // net wasm stack: [] -> [i32(stackptr)]
         expr_builder.global_get(ctx.stackptr);
-        expr_builder.i32_const((args.len() as u32 * size_in_memory(ir::VarType::Any)) as i32);
+        expr_builder.i32_const((args.len() as u32 * size_in_memory(ir::VarType::Any) + 16) as i32);
         expr_builder.i32_sub();
 
         // net wasm stack: [stackptr] -> []
@@ -1544,11 +1748,42 @@ fn encode_args_to_call_indirect_function<H: HeapManager>(
         }
     }
 
-    // net wasm stack: [] -> [i32(closure)]
-    expr_builder.local_get(closure_local);
+    if !tail_call {
+        // net wasm stack: [] -> [i32(closure)]
+        expr_builder.local_get(closure_local);
 
-    // net wasm stack: [] -> [i32(num_params)]
-    expr_builder.i32_const(args.len() as i32);
+        // net wasm stack: [] -> [i32(num_params)]
+        expr_builder.i32_const(args.len() as i32);
+    } else {
+        mutctx.with_scratch_i32(|mutctx, stackptr_localidx| {
+            // load stackptr
+            expr_builder.global_get(ctx.stackptr);
+            expr_builder.i32_const(8);
+            expr_builder.i32_sub();
+            expr_builder.local_tee(stackptr_localidx);
+
+            // net wasm stack: [] -> [i32(closure)]
+            expr_builder.local_get(closure_local);
+            encode_store_memory(
+                size_in_memory(ir::VarType::String),
+                ir::VarType::String,
+                ir::VarType::String,
+                mutctx.scratch_mut(),
+                expr_builder,
+            );
+            expr_builder.local_get(stackptr_localidx);
+
+            // net wasm stack: [] -> [i32(num_params)]
+            expr_builder.i32_const(args.len() as i32);
+            encode_store_memory(
+                0,
+                ir::VarType::String,
+                ir::VarType::String,
+                mutctx.scratch_mut(),
+                expr_builder,
+            );
+        });
+    }
 }
 
 // Encodes a small function that uses uniform calling convention and
@@ -1688,7 +1923,8 @@ fn encode_thunk<H: HeapManager>(
             if num_params > 0 {
                 // net wasm stack: [] -> [i32(localidx_stackptr)]
                 expr_builder.global_get(ctx.stackptr);
-                expr_builder.i32_const((size_in_memory(ir::VarType::Any) * num_params) as i32);
+
+                expr_builder.i32_const((16 + num_params * size_in_memory(ir::VarType::Any)) as i32);
                 expr_builder.i32_sub();
 
                 if num_params > 1 {
@@ -1779,7 +2015,7 @@ fn encode_thunk<H: HeapManager>(
                         &ctx.ir_signature_list[oe.funcidx].params[1..]
                     };
                     if params.len() as u32 == num_params {
-                        Some((params, ctx.ir_signature_list[oe.funcidx].result, oe))
+                        Some((params, Some(ir::VarType::String), oe))
                     } else {
                         None
                     }
@@ -1903,23 +2139,25 @@ fn encode_thunk<H: HeapManager>(
             } else {
                 // need to do a type conversion
                 if let Some(res) = result {
-                    // net wasm stack: [return_calling_conv(vartype)] -> [vartype]
-                    encode_post_appl_calling_conv(
-                        result,
-                        ctx.options.wasm_multi_value,
-                        ctx.stackptr,
-                        mutctx.scratch_mut(),
-                        expr_builder,
-                    );
-                    // net wasm stack: [vartype] -> [return_callin_conv(Any)]
-                    encode_return_calling_conv(
-                        ir::VarType::Any,
-                        res,
-                        ctx.options.wasm_multi_value,
-                        ctx.stackptr,
-                        mutctx.scratch_mut(),
-                        expr_builder,
-                    );
+                    if ctx.options.wasm_tail_call {
+                        // net wasm stack: [return_calling_conv(vartype)] -> [vartype]
+                        encode_post_appl_calling_conv(
+                            result,
+                            ctx.options.wasm_multi_value,
+                            ctx.stackptr,
+                            mutctx.scratch_mut(),
+                            expr_builder,
+                        );
+                        // net wasm stack: [vartype] -> [return_callin_conv(Any)]
+                        encode_return_calling_conv(
+                            ir::VarType::Any,
+                            res,
+                            ctx.options.wasm_multi_value,
+                            ctx.stackptr,
+                            mutctx.scratch_mut(),
+                            expr_builder,
+                        );
+                    }
                     // return it
                     expr_builder.return_();
                 } else {

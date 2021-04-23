@@ -40,13 +40,18 @@ pub fn relabel(expr: &mut Expr, relabeller: &mut Relabeller) -> bool {
             func,
             args,
             location: _,
+            tail_call: _,
         } => {
             relabel(func, relabeller)
                 | args
                     .iter_mut()
                     .fold(false, |prev, arg| prev | relabel(arg, relabeller))
         }
-        ExprKind::DirectAppl { funcidx: _, args } => args
+        ExprKind::DirectAppl {
+            funcidx: _,
+            args,
+            tail_call: _,
+        } => args
             .iter_mut()
             .fold(false, |prev, arg| prev | relabel(arg, relabeller)),
         ExprKind::Conditional {

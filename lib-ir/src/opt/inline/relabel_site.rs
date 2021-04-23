@@ -51,13 +51,18 @@ fn relabel_site(expr: &mut Expr, site: SiteProperties, num_landings: usize) -> b
             func,
             args,
             location: _,
+            tail_call: _,
         } => {
             relabel_site(func, site, num_landings)
                 | args.iter_mut().fold(false, |prev, arg| {
                     prev | relabel_site(arg, site, num_landings)
                 })
         }
-        ExprKind::DirectAppl { funcidx: _, args } => args.iter_mut().fold(false, |prev, arg| {
+        ExprKind::DirectAppl {
+            funcidx: _,
+            args,
+            tail_call: _,
+        } => args.iter_mut().fold(false, |prev, arg| {
             prev | relabel_site(arg, site, num_landings)
         }),
         ExprKind::Conditional {

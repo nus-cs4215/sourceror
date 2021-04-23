@@ -171,7 +171,7 @@ pub fn make_do_cheney<'a>(
                 expr_builder: &mut wasmgen::ExprBuilder,
                 scratch: &mut Scratch,
                 wasm_globalidx: wasmgen::GlobalIdx,
-                tableidx: wasmgen::TableIdx,
+                _tableidx: wasmgen::TableIdx,
                 copy_func: wasmgen::FuncIdx,
                 heap_begin: u32,
                 is_string: bool,
