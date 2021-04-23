@@ -5,10 +5,17 @@
 
 export class Transcoder {
   mem: DataView;
+  object_store: Array<object>;
+  
   allocate_string: (len: number) => number;
+  allocate_object: (len: number) => number;
+  
   constructor() {}
   setMem(mem: DataView) {
     this.mem = mem;
+  }
+  setObjectStore() {
+    this.object_store = [];
   }
   setAllocateStringFunc(func: (len: number) => number) {
     this.allocate_string = func;
@@ -30,5 +37,14 @@ export class Transcoder {
     // note: no need to set the length in the string, because allocateString() will already do it
     (new Uint8Array(this.mem.buffer, handle + 4, bytes.length)).set(bytes);
     return handle;
+  }
+
+  getObject(index: number): any {
+    return this.object_store[index];
+  }
+
+  setObject(o: any): number {
+    this.object_store.push(o);
+    return this.object_store.length - 1;
   }
 }

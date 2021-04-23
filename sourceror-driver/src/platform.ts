@@ -4,6 +4,8 @@
  */
 
 import { Transcoder } from "./transcoder";
+import {makeHeart, scale_independent, Rune} from "./runes";
+
 
 /**
  * The main function to use.
@@ -73,6 +75,18 @@ export function makePlatformImports(externalContext: any, transcoder: Transcoder
       imul: Math.imul,
       // random function
       random: Math.random,
+    },
+    // RUNES library 
+    runes: {
+      heart: () : number => {
+        // pass array index to wasm 
+        let index = transcoder.setObject(makeHeart);
+        return index;
+      },
+      scale_independent: (ratio_x: number, ratio_y: number, rune_index: number) : number => {
+        let rune_object : Rune = transcoder.getObject(rune_index);
+        return transcoder.setObject(scale_independent(ratio_x, ratio_y, rune_object)); 
+      }
     },
   };
 }
