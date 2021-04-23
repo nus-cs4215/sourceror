@@ -82,7 +82,7 @@ impl<A: Fn(Box<[u8]>) -> ()> TestContext for NormalContext<A> {
     */
     fn add_test<F: FnOnce(&mut CodeBuilder, &mut WasmModule, wasmgen::FuncIdx, &NormalTester)>(
         &mut self,
-        name_: &str,
+        _name_: &str,
         f: F,
     ) {
         let mut wasm_builder = WasmModule::new_builder();
@@ -96,6 +96,7 @@ impl<A: Fn(Box<[u8]>) -> ()> TestContext for NormalContext<A> {
             ),
         );
         // (number of previously passed test cases)
+        #[allow(unused_variables)]
         let test_failed_func = wasm_builder.import_func(
             "platform".to_string(),
             "test_fail".to_string(),

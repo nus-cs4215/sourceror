@@ -153,6 +153,7 @@ pub fn make_copy_funcs(
         .chain(std::iter::once(None)) // Boolean
         .chain(std::iter::once(Some(funcidx_copy_string))) // String
         .chain(std::iter::once(None)) // Func
+        .chain(std::iter::once(None))
         .chain(
             struct_sizes
                 .iter()

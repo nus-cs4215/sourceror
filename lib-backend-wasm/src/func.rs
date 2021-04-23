@@ -1061,7 +1061,7 @@ fn encode_expr<H: HeapManager>(
 // Loads the eventual value of `source`, following all struct fields, onto the stack, encoded as `outgoing_vartype`.
 // `outgoing_vartype` is required to be equivalent or subtype of the source vartype.  (Otherwise it means the optimiser is broken.)
 // net wasm stack: [] -> [<outgoing_vartype>]
-// TODONIG: add ability to access array entries
+// TODO: add ability to access array entries
 fn encode_target_value<H: HeapManager>(
     source: &ir::TargetExpr,
     outgoing_vartype: ir::VarType,

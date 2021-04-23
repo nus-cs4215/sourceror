@@ -264,6 +264,15 @@ pub fn make_copy_indirect_elements(
         heap_begin,
         true,
     );
+    
+        // TODONIG: check funcidx for array
+    // let arr_funcidx: wasmgen::FuncIdx = make_struct_function(
+    //     wasm_module,
+    //     copy_funcs[ir::VarType::Array.tag() as usize].unwrap(),
+    //     heap_begin,
+    //     false,
+    // );
+    let arr_funcidx = no_op_funcidx;
 
     let copy_indirect_elements: Box<[wasmgen::FuncIdx]> = std::iter::empty()
         .chain(std::iter::once(no_op_funcidx)) // Unassigned
@@ -272,6 +281,7 @@ pub fn make_copy_indirect_elements(
         .chain(std::iter::once(no_op_funcidx)) // Boolean
         .chain(std::iter::once(string_funcidx)) // String
         .chain(std::iter::once(func_funcidx)) // Func
+        .chain(std::iter::once(arr_funcidx)) // Array
         .chain((0..num_structs).map(|n| {
             make_struct_function(
                 wasm_module,
